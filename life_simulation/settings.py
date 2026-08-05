@@ -24,9 +24,18 @@ ALLOWED_HOSTS = [
     "life-simulation-9bqz.onrender.com",
 ]
 
+# Render sets this automatically at deploy time — covers the case where
+# the actual live URL differs from the hardcoded one above (e.g. Render
+# appends a suffix, or the service gets renamed/recreated).
+RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
 CSRF_TRUSTED_ORIGINS = [
     "https://life-simulation-9bqz.onrender.com",
 ]
+if RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
 
 # ==========================
 # Applications
@@ -49,6 +58,7 @@ INSTALLED_APPS = [
     "roadmap",
     "subscriptions",
     "home",
+    "pages",
 ]
 
 # ==========================

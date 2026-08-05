@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Test Result — {{ phase.title }} — EvolveX{% endblock %}
+{% block body_class %}theme-eclipse{% endblock %}
+
+{% block extra_head %}
+<style>
+  .rm-result-wrap { max-width: 700px; margin: 0 auto; padding: 1rem 0 3rem; }
+  .rm-result-banner {
+    text-align:center; padding: 2rem 1.5rem; border-radius: var(--radius); margin-bottom: 1.5rem;
+    border:1px solid rgba(255,255,255,0.06); box-shadow: var(--shadow);
+  }
+  .rm-result-banner.pass { background: linear-gradient(160deg, rgba(16,185,129,0.14), rgba(16,185,129,0.04)); border-color: rgba(16,185,129,0.3); }
+  .rm-result-banner.fail { background: linear-gradient(160deg, rgba(239,68,68,0.14), rgba(239,68,68,0.04)); border-color: rgba(239,68,68,0.3); }
+  .rm-result-score { font-size: 2.6rem; font-weight: 800; margin: .5rem 0; }
+  .rm-result-banner.pass .rm-result-score { color: var(--green); }
+  .rm-result-banner.fail .rm-result-score { color: #f87171; }
+  .rm-result-sub { color: var(--text-secondary); font-size: .88rem; }
+  .rm-result-actions { margin-top: 1.25rem; display:flex; gap:.75rem; justify-content:center; flex-wrap:wrap; }
+  .rm-qr-card {
+    background: var(--bg-card); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius);
+    padding: 1.1rem 1.3rem; margin-bottom: .75rem;
+  }
+  .rm-qr-top { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.4rem; }
+  .rm-qr-q { font-size:.88rem; font-weight:600; }
+  .rm-qr-marks { font-size:.78rem; font-weight:700; white-space:nowrap; flex-shrink:0; }
+  .rm-qr-marks.full { color: var(--green); }
+  .rm-qr-marks.zero { color: #f87171; }
+  .rm-qr-marks.partial { color: #fbbf24; }
+  .rm-qr-feedback { font-size:.78rem; color: var(--text-secondary); margin-top:.35rem; }
+  .rm-weak-topics { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.9rem; justify-content:center; }
+  .rm-weak-chip { font-size:.72rem; padding:.25rem .65rem; border-radius:999px; background: rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.25); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rm-result-wrap">
+
+  <div class="rm-result-banner {% if test.passed %}pass{% else %}fail{% endif %}">
+    {% if test.passed %}
+      <div style="font-size:2rem;">🎉</div>
+      <div class="rm-result-score">{{ test.score }} / {{ test.total_marks }}</div>
+      <div class="rm-result-sub">Passed! Checkpoint cleared — next phase unlocked.</div>
+      <div class="rm-result-actions">
+        <a href="{% url 'roadmap_home' %}" class="btn btn-primary"><i data-lucide="arrow-right" class="lucide"></i> Continue</a>
+      </div>
+    {% else %}
+      <div style="font-size:2rem;">📖</div>
+      <div class="rm-result-score">{{ test.score }} / {{ test.total_marks }}</div>
+      <div class="rm-result-sub">Needed {{ test.passing_marks }} to pass — not quite there yet.</div>
+      {% if test.weak_topics %}
+      <div class="rm-weak-topics">
+        {% for topic in test.weak_topics %}<span class="rm-weak-chip">{{ topic }}</span>{% endfor %}
+      </div>
+      {% endif %}
+      <div class="rm-result-actions">
+        <form method="post" action="{% url 'roadmap_start_remedial' phase.id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary"><i data-lucide="book-open" class="lucide"></i> Study More &amp; Retake Test</button>
+        </form>
+        <a href="{% url 'roadmap_home' %}" class="btn" style="border:1px solid var(--border); color:var(--text-secondary);">Back to Roadmap</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <h3 style="font-size:.9rem; font-weight:700; margin-bottom:.75rem; color:var(--text-secondary);">Answer Breakdown</h3>
+  {% for q in test.questions %}
+  <div class="rm-qr-card">
+    <div class="rm-qr-top">
+      <div class="rm-qr-q">{{ forloop.counter }}. {{ q.question }}</div>
+      <div class="rm-qr-marks {% if q.awarded_marks == q.marks %}full{% elif q.awarded_marks == 0 %}zero{% else %}partial{% endif %}">
+        {{ q.awarded_marks }}/{{ q.marks }}
+      </div>
+    </div>
+    {% if q.feedback %}<div class="rm-qr-feedback">{{ q.feedback }}</div>{% endif %}
+  </div>
+  {% endfor %}
+
+</div>
+{% endblock %}

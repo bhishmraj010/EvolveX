@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Complete Your Profile — EvolveX{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+  <div class="auth-header">
+    <h1><i data-lucide="user-plus" class="lucide"></i> Almost There</h1>
+    <p>Set up your account to start your evolution</p>
+  </div>
+
+  <div class="card glass">
+    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1.1rem;">
+      Signing up with <strong style="color:var(--text-primary);">{{ email }}</strong>
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="form-group">
+        <label for="id_username">Username</label>
+        {{ form.username }}
+        {% if form.username.errors %}<p class="form-error">{{ form.username.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="id_phone_number">Phone Number</label>
+        <div style="display:flex;gap:0.5rem;">
+          <div style="flex:0 0 auto;min-width:9.5rem;">
+            {{ form.country_code }}
+          </div>
+          <div style="flex:1;">
+            {{ form.phone_number }}
+          </div>
+        </div>
+        {% if form.country_code.errors %}<p class="form-error">{{ form.country_code.errors.0 }}</p>{% endif %}
+        {% if form.phone_number.errors %}<p class="form-error">{{ form.phone_number.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="id_password1">Password</label>
+        {{ form.password1 }}
+        {% if form.password1.errors %}<p class="form-error">{{ form.password1.errors.0 }}</p>{% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="id_password2">Confirm Password</label>
+        {{ form.password2 }}
+        {% if form.password2.errors %}<p class="form-error">{{ form.password2.errors.0 }}</p>{% endif %}
+      </div>
+
+      {% if form.non_field_errors %}
+        <p class="form-error" style="margin-bottom:1rem;">{{ form.non_field_errors.0 }}</p>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary" style="width:100%;">
+        Create My Account
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

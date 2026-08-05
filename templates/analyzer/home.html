@@ -1,0 +1,541 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}AI Life Coach — EvolveX{% endblock %}
+{% block body_class %}theme-obsidian{% endblock %}
+
+{% block extra_head %}
+  <!-- Tailwind CSS (development) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Glassmorphism & custom styles */
+    .glass {
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .glass-hover:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    }
+    .score-glow {
+      text-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+    }
+    .grade-S { color: #fbbf24; text-shadow: 0 0 30px rgba(251,191,36,0.3); }
+    .grade-A { color: #34d399; }
+    .grade-B { color: #60a5fa; }
+    .grade-C { color: #f59e0b; }
+    .grade-D { color: #f87171; }
+    .risk-bar-bg { background: rgba(255,255,255,0.06); }
+    .risk-bar-fill { transition: width 1s ease-in-out; }
+    /* animate on scroll */
+    .reveal { opacity: 0; transform: translateY(20px); transition: all 0.7s ease-out; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    /* Chart container */
+    .chart-container { height: 300px; width: 100%; }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-bold text-white flex items-center gap-2">
+        <i data-lucide="sparkles" class="w-8 h-8 text-indigo-400"></i>
+        AI Life Coach
+      </h1>
+      <p class="text-gray-400 text-sm mt-1">
+        {{ report.summary_text|default:"Your personal evolution engine" }}
+        {% if was_cached %}<span class="text-gray-500 ml-2">· cached</span>{% endif %}
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="?type={{ report_type }}&refresh=1" class="px-4 py-2 glass rounded-lg text-sm text-gray-300 hover:text-white transition flex items-center gap-2">
+        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Re-analyze
+      </a>
+    </div>
+  </div>
+
+  <!-- Report Type Tabs -->
+  <div class="flex flex-wrap gap-2">
+    {% for t, label in report_types %}
+      <a href="?type={{ t }}"
+         class="px-4 py-2 rounded-lg text-sm transition
+                {% if report_type == t %}
+                  glass border-indigo-500 text-white
+                {% else %}
+                  text-gray-400 hover:text-white border border-transparent hover:border-gray-700
+                {% endif %}">
+        {{ label }}
+      </a>
+    {% endfor %}
+  </div>
+
+  {% if not report %}
+    <div class="glass p-8 text-center text-gray-400 rounded-2xl">
+      <i data-lucide="alert-circle" class="w-12 h-12 mx-auto text-yellow-500 mb-4"></i>
+      <p>Couldn't generate analysis. Please try again later.</p>
+    </div>
+  {% else %}
+
+  <!-- ========== 0. Section Reports (Todo / Willpower / Diet / Roadmap / Boss Fight) ========== -->
+  <section class="reveal">
+    <div class="flex items-center gap-2 mb-4">
+      <i data-lucide="layout-grid" class="w-6 h-6 text-indigo-400"></i>
+      <h2 class="text-2xl font-bold text-white">Section Reports</h2>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {% for s in sections %}
+        <div class="glass rounded-2xl p-6 glass-hover transition">
+          <div class="flex items-start justify-between gap-3 mb-3">
+            <div class="flex items-center gap-2">
+              <i data-lucide="{{ s.icon }}" class="w-5 h-5 text-indigo-400"></i>
+              <h3 class="text-lg font-semibold text-white">{{ s.title }}</h3>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+              <span class="text-2xl font-bold text-white">{{ s.data.score|default:0 }}</span>
+              <span class="text-xl font-bold grade-{{ s.data.grade|default:'B' }}">{{ s.data.grade|default:"—" }}</span>
+            </div>
+          </div>
+
+          <p class="text-gray-300 text-sm leading-relaxed">{{ s.data.verdict|default:"No data yet for this section." }}</p>
+
+          {% if s.data.good_patterns %}
+            <div class="mt-4">
+              <div class="text-xs uppercase tracking-wider text-gray-500 mb-1">Working Well</div>
+              <ul class="space-y-1 text-sm text-gray-300">
+                {% for p in s.data.good_patterns %}
+                  <li class="flex items-start gap-2"><span class="text-green-400 mt-0.5">✓</span><span>{{ p }}</span></li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          {% if s.data.bad_patterns %}
+            <div class="mt-3">
+              <div class="text-xs uppercase tracking-wider text-gray-500 mb-1">Dragging You Down</div>
+              <ul class="space-y-1 text-sm text-gray-300">
+                {% for p in s.data.bad_patterns %}
+                  <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">✗</span><span>{{ p }}</span></li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          {% if s.data.insights %}
+            <div class="mt-3">
+              <div class="text-xs uppercase tracking-wider text-gray-500 mb-1">Insights</div>
+              <ul class="space-y-1 text-sm text-gray-300">
+                {% for i in s.data.insights %}
+                  <li class="flex items-start gap-2"><span class="text-yellow-400 mt-0.5">•</span><span>{{ i }}</span></li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          {% if s.data.recommendations %}
+            <div class="mt-3">
+              <div class="text-xs uppercase tracking-wider text-gray-500 mb-1">Do This Next</div>
+              <ul class="space-y-1 text-sm text-gray-300">
+                {% for r in s.data.recommendations %}
+                  <li class="flex items-start gap-2"><span class="text-cyan-400 mt-0.5">→</span><span>{{ r }}</span></li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <div class="mt-4">
+            <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
+              <span>Regression Risk</span><span>{{ s.data.risk_pct|default:0 }}%</span>
+            </div>
+            <div class="w-full h-1.5 risk-bar-bg rounded-full overflow-hidden">
+              <div class="h-full bg-orange-400 risk-bar-fill" style="width:{{ s.data.risk_pct|default:0 }}%"></div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- ========== Combined Overall Analysis ========== -->
+  <div class="flex items-center gap-2 pt-2">
+    <i data-lucide="git-merge" class="w-6 h-6 text-indigo-400"></i>
+    <h2 class="text-2xl font-bold text-white">Combined Overall Analysis</h2>
+  </div>
+
+  <!-- ========== 1. AI Verdict ========== -->
+  <section class="glass rounded-2xl p-6 reveal">
+    <div class="flex items-start gap-4">
+      <div class="p-3 rounded-full bg-indigo-500/20">
+        <i data-lucide="gavel" class="w-6 h-6 text-indigo-400"></i>
+      </div>
+      <div class="flex-1">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-xl font-semibold text-white">AI Verdict</h2>
+          <div class="flex items-center gap-2 text-sm">
+            <span class="text-gray-400">Confidence</span>
+            <span class="text-white font-mono">{{ report.confidence_score|default:0 }}%</span>
+            <div class="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-400 rounded-full" style="width:{{ report.confidence_score|default:0 }}%"></div>
+            </div>
+          </div>
+        </div>
+        <p class="text-gray-300 mt-3 leading-relaxed">{{ report.verdict|default:"No verdict available." }}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 2. Evolution Score + Grade ========== -->
+  <section class="glass rounded-2xl p-6 reveal text-center">
+    <div class="flex flex-col items-center">
+      <div class="text-6xl font-bold text-white score-glow">{{ report.evolution_score|default:0 }}</div>
+      <div class="text-sm text-gray-400 uppercase tracking-wider mt-1">Evolution Score</div>
+      <div class="mt-2 text-3xl font-bold grade-{{ report.evolution_grade|default:'B' }}">
+        {{ report.evolution_grade|default:"—" }}
+      </div>
+      <div class="text-xs text-gray-500">Grade</div>
+    </div>
+  </section>
+
+  <!-- ========== 3. AI Score Cards ========== -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 reveal">
+    <div class="glass rounded-xl p-5 text-center hover:glass-hover transition">
+      <i data-lucide="target" class="w-6 h-6 text-indigo-400 mx-auto mb-2"></i>
+      <div class="text-3xl font-bold text-white">{{ report.discipline_score|default:0 }}</div>
+      <div class="text-xs text-gray-400 uppercase tracking-wider">Discipline</div>
+    </div>
+    <div class="glass rounded-xl p-5 text-center hover:glass-hover transition">
+      <i data-lucide="zap" class="w-6 h-6 text-yellow-400 mx-auto mb-2"></i>
+      <div class="text-3xl font-bold text-white">{{ report.productivity_score|default:0 }}</div>
+      <div class="text-xs text-gray-400 uppercase tracking-wider">Productivity</div>
+    </div>
+    <div class="glass rounded-xl p-5 text-center hover:glass-hover transition">
+      <i data-lucide="eye" class="w-6 h-6 text-cyan-400 mx-auto mb-2"></i>
+      <div class="text-3xl font-bold text-white">{{ report.focus_score|default:0 }}</div>
+      <div class="text-xs text-gray-400 uppercase tracking-wider">Focus</div>
+    </div>
+    <div class="glass rounded-xl p-5 text-center hover:glass-hover transition border border-indigo-500/30">
+      <i data-lucide="trending-up" class="w-6 h-6 text-green-400 mx-auto mb-2"></i>
+      <div class="text-3xl font-bold text-white">{{ report.evolution_score|default:0 }}</div>
+      <div class="text-xs text-gray-400 uppercase tracking-wider">Evolution</div>
+    </div>
+  </section>
+
+  <!-- ========== 4. Hidden Patterns ========== -->
+  <section class="glass rounded-2xl p-6 reveal">
+    <div class="flex items-center gap-2 mb-4">
+      <i data-lucide="eye-off" class="w-5 h-5 text-purple-400"></i>
+      <h2 class="text-lg font-semibold text-white">Hidden Patterns</h2>
+    </div>
+    {% if report.hidden_patterns %}
+      <ul class="space-y-2 text-gray-300">
+        {% for pattern in report.hidden_patterns %}
+          <li class="flex items-start gap-2">
+            <span class="text-purple-400 mt-1">•</span>
+            <span>{{ pattern }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-gray-500 text-sm">No hidden patterns detected yet.</p>
+    {% endif %}
+  </section>
+
+  <!-- ========== 5. Success Patterns ========== -->
+  <section class="glass rounded-2xl p-6 reveal">
+    <div class="flex items-center gap-2 mb-4">
+      <i data-lucide="check-circle" class="w-5 h-5 text-green-400"></i>
+      <h2 class="text-lg font-semibold text-white">Success Patterns</h2>
+    </div>
+    {% if report.success_patterns %}
+      <ul class="space-y-2 text-gray-300">
+        {% for pattern in report.success_patterns %}
+          <li class="flex items-start gap-2">
+            <span class="text-green-400 mt-1">✓</span>
+            <span>{{ pattern }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-gray-500 text-sm">Not enough data to identify success patterns.</p>
+    {% endif %}
+  </section>
+
+  <!-- ========== 6. Failure Patterns ========== -->
+  <section class="glass rounded-2xl p-6 reveal">
+    <div class="flex items-center gap-2 mb-4">
+      <i data-lucide="x-circle" class="w-5 h-5 text-red-400"></i>
+      <h2 class="text-lg font-semibold text-white">Failure Patterns</h2>
+    </div>
+    {% if report.failure_patterns %}
+      <ul class="space-y-2 text-gray-300">
+        {% for pattern in report.failure_patterns %}
+          <li class="flex items-start gap-2">
+            <span class="text-red-400 mt-1">✗</span>
+            <span>{{ pattern }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-gray-500 text-sm">No failure patterns detected.</p>
+    {% endif %}
+  </section>
+
+  <!-- ========== 7. Opportunity Engine ========== -->
+  <section class="glass rounded-2xl p-6 reveal">
+    <div class="flex items-center gap-2 mb-4">
+      <i data-lucide="rocket" class="w-5 h-5 text-orange-400"></i>
+      <h2 class="text-lg font-semibold text-white">Opportunity Engine</h2>
+    </div>
+
+    {% if report.best_opportunity and report.best_opportunity.description %}
+      <div class="p-4 mb-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30">
+        <div class="flex items-center justify-between">
+          <span class="text-indigo-300 font-medium">Best Opportunity</span>
+          <span class="text-sm text-indigo-300">Impact {{ report.best_opportunity.impact|default:0 }}%</span>
+        </div>
+        <p class="text-white mt-1">{{ report.best_opportunity.description }}</p>
+      </div>
+    {% endif %}
+
+    {% if report.opportunities %}
+      <ul class="space-y-3">
+        {% for opp in report.opportunities %}
+          <li class="flex items-center justify-between gap-4 p-3 rounded-lg bg-white/5">
+            <span class="text-gray-300">{{ opp.description }}</span>
+            <span class="text-sm text-gray-400 whitespace-nowrap">Impact {{ opp.impact|default:0 }}%</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-gray-500 text-sm">No opportunities generated.</p>
+    {% endif %}
+  </section>
+
+  <!-- ========== 8. Risk Analysis Cards ========== -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 reveal">
+    <div class="glass rounded-xl p-4 text-center">
+      <div class="text-sm text-gray-400">Burnout</div>
+      <div class="text-2xl font-bold text-white">{{ report.burnout_risk|default:0 }}%</div>
+      <div class="w-full h-1.5 risk-bar-bg rounded-full mt-2 overflow-hidden">
+        <div class="h-full bg-red-400 risk-bar-fill" style="width:{{ report.burnout_risk|default:0 }}%"></div>
+      </div>
+    </div>
+    <div class="glass rounded-xl p-4 text-center">
+      <div class="text-sm text-gray-400">Streak Break</div>
+      <div class="text-2xl font-bold text-white">{{ report.streak_break_risk|default:0 }}%</div>
+      <div class="w-full h-1.5 risk-bar-bg rounded-full mt-2 overflow-hidden">
+        <div class="h-full bg-yellow-400 risk-bar-fill" style="width:{{ report.streak_break_risk|default:0 }}%"></div>
+      </div>
+    </div>
+    <div class="glass rounded-xl p-4 text-center">
+      <div class="text-sm text-gray-400">Goal Failure</div>
+      <div class="text-2xl font-bold text-white">{{ report.goal_failure_risk|default:0 }}%</div>
+      <div class="w-full h-1.5 risk-bar-bg rounded-full mt-2 overflow-hidden">
+        <div class="h-full bg-orange-400 risk-bar-fill" style="width:{{ report.goal_failure_risk|default:0 }}%"></div>
+      </div>
+    </div>
+    <div class="glass rounded-xl p-4 text-center">
+      <div class="text-sm text-gray-400">Productivity Decline</div>
+      <div class="text-2xl font-bold text-white">{{ report.productivity_decline_risk|default:0 }}%</div>
+      <div class="w-full h-1.5 risk-bar-bg rounded-full mt-2 overflow-hidden">
+        <div class="h-full bg-indigo-400 risk-bar-fill" style="width:{{ report.productivity_decline_risk|default:0 }}%"></div>
+      </div>
+    </div>
+    <div class="glass rounded-xl p-4 text-center">
+      <div class="text-sm text-gray-400">Consistency</div>
+      <div class="text-2xl font-bold text-white">{{ report.consistency_risk|default:0 }}%</div>
+      <div class="w-full h-1.5 risk-bar-bg rounded-full mt-2 overflow-hidden">
+        <div class="h-full bg-cyan-400 risk-bar-fill" style="width:{{ report.consistency_risk|default:0 }}%"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 9. Goal Prediction Cards ========== -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 reveal">
+    <div class="glass rounded-xl p-5 text-center">
+      <div class="text-sm text-gray-400">Goal Probability</div>
+      <div class="text-3xl font-bold text-white">{{ report.goal_probability|default:0 }}%</div>
+    </div>
+    <div class="glass rounded-xl p-5 text-center">
+      <div class="text-sm text-gray-400">Expected Level</div>
+      <div class="text-3xl font-bold text-white">{{ report.expected_level|default:0 }}</div>
+    </div>
+    <div class="glass rounded-xl p-5 text-center">
+      <div class="text-sm text-gray-400">Level‑up in</div>
+      <div class="text-3xl font-bold text-white">{{ report.expected_level_days|default:0 }} days</div>
+    </div>
+    <div class="glass rounded-xl p-5 text-center">
+      <div class="text-sm text-gray-400">Expected XP</div>
+      <div class="text-3xl font-bold text-white">{{ report.expected_xp|default:0 }}</div>
+      <div class="text-xs text-gray-500">+{{ report.expected_weekly_xp|default:0 }}/wk</div>
+    </div>
+  </section>
+
+  <!-- ========== 10. Trend Analysis ========== -->
+  <section class="glass rounded-2xl p-6 reveal">
+    <div class="flex items-center gap-2 mb-4">
+      <i data-lucide="trending-up" class="w-5 h-5 text-blue-400"></i>
+      <h2 class="text-lg font-semibold text-white">Trend Analysis</h2>
+    </div>
+    <p class="text-gray-300">{{ report.trend_summary|default:"No trend data available." }}</p>
+    <div class="chart-container mt-6">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </section>
+
+  <!-- ========== 11. Key Insights ========== -->
+  <section class="glass rounded-2xl p-6 reveal">
+    <div class="flex items-center gap-2 mb-4">
+      <i data-lucide="lightbulb" class="w-5 h-5 text-yellow-400"></i>
+      <h2 class="text-lg font-semibold text-white">Key Insights</h2>
+    </div>
+    {% if report.insights %}
+      <ul class="space-y-2 text-gray-300">
+        {% for insight in report.insights %}
+          <li class="flex items-start gap-2">
+            <span class="text-yellow-400 mt-1">•</span>
+            <span>{{ insight }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-gray-500 text-sm">No insights available.</p>
+    {% endif %}
+  </section>
+
+  <!-- ========== 12. Root Cause Analysis ========== -->
+  <section class="glass rounded-2xl p-6 reveal">
+    <div class="flex items-center gap-2 mb-4">
+      <i data-lucide="search" class="w-5 h-5 text-purple-400"></i>
+      <h2 class="text-lg font-semibold text-white">Root Cause Analysis</h2>
+    </div>
+    {% if report.root_causes %}
+      <ul class="space-y-2 text-gray-300">
+        {% for cause in report.root_causes %}
+          <li class="flex items-start gap-2">
+            <span class="text-purple-400 mt-1">▸</span>
+            <span>{{ cause }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-gray-500 text-sm">No root causes identified.</p>
+    {% endif %}
+  </section>
+
+  <!-- ========== 13. Personalized Recommendations ========== -->
+  <section class="glass rounded-2xl p-6 reveal border border-cyan-500/20">
+    <div class="flex items-center gap-2 mb-4">
+      <i data-lucide="check-square" class="w-5 h-5 text-cyan-400"></i>
+      <h2 class="text-lg font-semibold text-white">Personalized Recommendations</h2>
+    </div>
+    {% if report.recommendations %}
+      <ul class="space-y-3">
+        {% for rec in report.recommendations %}
+          <li class="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+            <span class="text-cyan-400 mt-0.5">→</span>
+            <span class="text-gray-300">{{ rec }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-gray-500 text-sm">No recommendations yet.</p>
+    {% endif %}
+  </section>
+
+  <!-- ========== 14. Future Prediction ========== -->
+  <section class="glass rounded-2xl p-6 reveal border border-{{ report.score_band }}-500/30">
+    <div class="flex items-center gap-2 mb-4">
+      <i data-lucide="crystal-ball" class="w-5 h-5 text-pink-400"></i>
+      <h2 class="text-lg font-semibold text-white">Future Prediction</h2>
+    </div>
+    <p class="text-gray-300">{{ report.prediction_text|default:"No prediction available." }}</p>
+  </section>
+
+  {% endif %}
+
+  <!-- ========== JSON data for charts (safe) ========== -->
+  {{ chart_labels|json_script:"chart-labels" }}
+  {{ chart_evolution|json_script:"chart-evolution" }}
+  {{ chart_discipline|json_script:"chart-discipline" }}
+  {{ chart_productivity|json_script:"chart-productivity" }}
+  {{ chart_focus|json_script:"chart-focus" }}
+
+</div>
+
+<!-- ========== JavaScript ========== -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Lucide icons
+    lucide.createIcons();
+
+    // Reveal animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // Safely retrieve chart data from json_script
+    function getJsonData(id) {
+      const el = document.getElementById(id);
+      if (!el) return [];
+      try {
+        return JSON.parse(el.textContent);
+      } catch (e) {
+        console.warn('Failed to parse ' + id, e);
+        return [];
+      }
+    }
+
+    const labels = getJsonData('chart-labels');
+    const evolutionData = getJsonData('chart-evolution');
+    const disciplineData = getJsonData('chart-discipline');
+    const productivityData = getJsonData('chart-productivity');
+    const focusData = getJsonData('chart-focus');
+
+    const ctx = document.getElementById('trendChart');
+    if (ctx && labels.length > 0) {
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'Evolution', data: evolutionData, borderColor: '#818cf8', backgroundColor: 'rgba(129, 140, 248, 0.1)', tension: 0.2, fill: true },
+            { label: 'Discipline', data: disciplineData, borderColor: '#34d399', backgroundColor: 'transparent', tension: 0.2 },
+            { label: 'Productivity', data: productivityData, borderColor: '#fbbf24', backgroundColor: 'transparent', tension: 0.2 },
+            { label: 'Focus', data: focusData, borderColor: '#22d3ee', backgroundColor: 'transparent', tension: 0.2 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#9ca3af' } }
+          },
+          scales: {
+            x: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { min: 0, max: 100, ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+    } else if (ctx) {
+      // Show fallback message if no data
+      const parent = ctx.parentElement;
+      parent.innerHTML = '<p class="text-gray-500 text-center py-8">Not enough history to show trend chart.</p>';
+    }
+  });
+</script>
+{% endblock %}

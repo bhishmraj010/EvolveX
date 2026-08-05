@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}{{ feature_name }} — Locked{% endblock %}
+
+{% block content %}
+<div class="auth-container" style="max-width:520px;">
+  <div class="card glass" style="text-align:center;padding:2.4rem 1.8rem;">
+    <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#8b5cf6,#f59e0b);display:flex;align-items:center;justify-content:center;margin:0 auto 1.2rem;">
+      <i data-lucide="lock" class="lucide" style="width:30px;height:30px;color:#fff;"></i>
+    </div>
+
+    <h2 style="margin-bottom:0.5rem;">{{ feature_name }} is Premium</h2>
+    <p style="color:var(--text-secondary);font-size:0.92rem;line-height:1.5;margin-bottom:1.6rem;">
+      You've completed Level 1 — nice work. From here, {{ feature_name }} unlocks
+      with any active plan: Monthly, 3-Month, or Lifetime.
+    </p>
+
+    <a href="{% url 'pricing' %}" class="btn btn-primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+      <i data-lucide="crown" class="lucide" style="width:18px;height:18px;"></i>
+      View Plans
+    </a>
+
+    <a href="{% url 'dashboard' %}" style="display:block;margin-top:1rem;color:var(--text-muted);font-size:0.85rem;">
+      ← Back to Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}

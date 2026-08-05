@@ -1,0 +1,509 @@
+{% extends 'base.html' %}
+{% block title %}To-Do Tracker — EvolveX{% endblock %}
+{% block body_class %}theme-eclipse{% endblock %}
+
+{% block extra_head %}
+<style>
+  .td-head-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.4rem;animation:fade-in-up .5s ease both;}
+  .td-title{font-size:1.7rem;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:0.5rem;}
+  .td-sub{color:var(--text-secondary);font-size:0.85rem;margin-top:0.2rem;}
+
+  .td-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.2rem;}
+  @media (max-width:820px){ .td-stats-row{grid-template-columns:1fr 1fr;} }
+  .td-stat{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:1.1rem 1.3rem;backdrop-filter:blur(10px);
+    display:flex;align-items:center;justify-content:space-between;gap:0.8rem;
+    animation:fade-in-up .5s ease both;transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease;}
+  .td-stat:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:0 10px 24px var(--accent-glow);}
+  .td-stats-row .td-stat:nth-child(1){animation-delay:.03s;} .td-stats-row .td-stat:nth-child(2){animation-delay:.08s;}
+  .td-stats-row .td-stat:nth-child(3){animation-delay:.13s;} .td-stats-row .td-stat:nth-child(4){animation-delay:.18s;}
+  .td-stat .lbl{font-size:0.75rem;color:var(--text-secondary);}
+  .td-stat .big{font-size:1.35rem;font-weight:800;color:var(--text-primary);margin-top:0.15rem;}
+  .td-stat .ic-badge{width:38px;height:38px;border-radius:10px;background:rgba(124,58,237,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+  .td-progress-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:1.2rem 1.3rem;margin-bottom:1.2rem;backdrop-filter:blur(10px);animation:fade-in-up .55s ease both;}
+  .td-progress-track{height:10px;border-radius:6px;background:rgba(255,255,255,.06);overflow:hidden;margin:0.6rem 0;}
+  .td-progress-fill{height:100%;border-radius:6px;transition:width .8s ease;}
+  .td-zone-labels{display:flex;justify-content:space-between;font-size:0.72rem;}
+  .td-zone-labels span{display:flex;align-items:center;gap:0.3rem;}
+
+  .td-task-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:1.3rem;backdrop-filter:blur(10px);animation:fade-in-up .6s ease both;}
+  .td-task-card__head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.6rem;margin-bottom:1rem;}
+  .td-task-card__title{font-size:1rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:0.5rem;}
+  .td-meta{font-size:0.78rem;color:var(--text-secondary);}
+  .td-filter-btn{display:flex;align-items:center;gap:0.4rem;background:transparent;border:1px solid var(--border);border-radius:8px;padding:0.4rem 0.9rem;color:var(--text-secondary);font-size:0.8rem;cursor:pointer;transition:border-color .2s ease,color .2s ease;}
+  .td-filter-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+  .td-empty{text-align:center;padding:2.2rem 1rem;color:var(--text-secondary);}
+  .td-empty .ic{width:44px;height:44px;color:var(--text-muted);margin:0 auto 0.6rem;}
+
+  .td-icon-inline{width:1em;height:1em;vertical-align:-0.15em;}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if level_up_popup %}
+<div class="level-up-overlay" id="level-up-overlay">
+  <div class="level-up-card">
+    <i data-lucide="trophy" class="lucide" style="width:2.4rem;height:2.4rem;color:var(--gold);"></i>
+    <div class="level-up-card__title">LEVEL COMPLETE!</div>
+    <div class="level-up-card__subtitle">Level {{ level_up_popup.level }} — {{ level_up_popup.title }}</div>
+    <button type="button" class="level-up-card__btn" id="level-up-close">Continue</button>
+  </div>
+</div>
+{% endif %}
+
+<div class="td-head-row">
+  <div>
+    <div class="td-title"><i data-lucide="check-square" class="lucide"></i> To-Do Tracker</div>
+    <div class="td-sub">Plan your day. Complete your tasks. Evolve every day.</div>
+  </div>
+  <button type="button" class="btn" onclick="document.getElementById('new-task-title').focus();" style="display:flex;align-items:center;gap:0.4rem;">
+    <i data-lucide="plus" class="lucide"></i> New Task
+  </button>
+</div>
+
+{% if pending_boss %}
+<a href="/dashboard/boss/" class="boss-pending-banner">
+  <span class="boss-pending-banner__icon"><i data-lucide="swords" class="lucide"></i></span>
+  <span class="boss-pending-banner__text">
+    <strong>{{ pending_boss.name }}</strong> is blocking your next level up — finish the fight whenever you're ready.
+  </span>
+  <span class="boss-pending-banner__cta">Fight now →</span>
+</a>
+{% endif %}
+
+<!-- ── Date Navigation ── -->
+<div class="date-nav" style="margin-bottom:1.2rem;">
+  <a href="/dashboard/todo/?date={{ prev_date }}" class="date-arrow" title="Previous Day">‹</a>
+  <div class="date-center">
+    <span class="date-label">
+      {% if is_today %}Today
+      {% elif selected_date > today %}{{ selected_date|date:"l" }} (Future)
+      {% else %}{{ selected_date|date:"l" }}{% endif %}
+    </span>
+    <span class="date-value">{{ selected_date|date:"d M Y" }}</span>
+    <input type="date" id="date-picker" value="{{ selected_date|date:'Y-m-d' }}"
+      onchange="window.location='/dashboard/todo/?date='+this.value"
+      class="date-picker-input" />
+  </div>
+  <a href="/dashboard/todo/?date={{ next_date }}" class="date-arrow" title="Next Day">›</a>
+</div>
+
+{% if selected_date > today %}
+<div style="background:var(--accent-glow);border:1px solid var(--accent)44;border-radius:10px;padding:0.65rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:var(--accent-hover);display:flex;align-items:center;gap:0.5rem;">
+  <i data-lucide="calendar-plus" class="lucide"></i> <strong>Planning Mode</strong> — add tasks for this day; complete/skip only available on the actual day.
+</div>
+{% elif selected_date < today %}
+<div style="background:rgba(245,158,11,.08);border:1px solid var(--gold)44;border-radius:10px;padding:0.65rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:var(--gold);display:flex;align-items:center;gap:0.5rem;">
+  <i data-lucide="book-open" class="lucide"></i> <strong>Read Only</strong> — this is a past day, no changes allowed.
+</div>
+{% endif %}
+
+<!-- ── Stat cards ── -->
+<div class="td-stats-row">
+  <div class="td-stat">
+    <div>
+      <div class="lbl">Tasks Done</div>
+      <div class="big" id="tasks-done-count">{{ tasks_done_ct }} / {{ tasks_total_ct }}</div>
+      <div class="lbl">{% if tasks_total_ct == 0 %}No tasks yet{% else %}Keep completing{% endif %}</div>
+    </div>
+    <div class="ic-badge"><i data-lucide="check-circle-2" class="lucide" style="color:var(--green);"></i></div>
+  </div>
+  <div class="td-stat">
+    <div>
+      <div class="lbl">Completed Tasks</div>
+      <div class="big" id="completed-count">{{ completed|length }}</div>
+      <div class="lbl">Today</div>
+    </div>
+    <div class="ic-badge"><i data-lucide="check-check" class="lucide" style="color:var(--win-color);"></i></div>
+  </div>
+  <div class="td-stat">
+    <div>
+      <div class="lbl">Skipped Tasks</div>
+      <div class="big" id="skipped-count">{{ skipped|length }}</div>
+      <div class="lbl">Today</div>
+    </div>
+    <div class="ic-badge"><i data-lucide="skip-forward" class="lucide" style="color:var(--lose-color);"></i></div>
+  </div>
+  <div class="td-stat">
+    <div>
+      <div class="lbl">Task XP</div>
+      <div class="big" id="total-points">{{ log.total_points }}</div>
+      <div class="lbl">Earned today</div>
+    </div>
+    <div class="ic-badge"><i data-lucide="zap" class="lucide" style="color:var(--gold);"></i></div>
+  </div>
+</div>
+
+{% if log.punishment %}
+<div class="message message-error" style="margin-bottom:1.2rem;display:flex;align-items:center;gap:0.5rem;">
+  <i data-lucide="alert-triangle" class="lucide"></i> Yesterday was a <strong>Lose Day</strong> — today starts with <strong>-10 XP</strong>. Fight back!
+</div>
+{% endif %}
+
+<!-- ── Progress Bar ── -->
+<div class="td-progress-card">
+  <div style="display:flex;justify-content:space-between;">
+    <span class="lbl" style="color:var(--text-secondary);font-size:0.85rem;">Daily Progress</span>
+    <span class="lbl" style="color:var(--text-secondary);font-size:0.85rem;" id="progress-label">{{ log.total_points }}/{{ win_pts }}</span>
+  </div>
+  <div class="td-progress-track">
+    <div class="td-progress-fill" id="progress-bar"
+      style="width:clamp(0%, calc({{ log.total_points }} / {{ win_pts }} * 100%), 100%);
+      {% if log.day_status == 'win' %}background:var(--win-color);
+      {% elif log.day_status == 'survive' %}background:var(--survive-color);
+      {% else %}background:var(--lose-color);{% endif %}">
+    </div>
+  </div>
+  <div class="td-zone-labels">
+    <span style="color:var(--lose-color);"><i data-lucide="trending-down" class="td-icon-inline lucide"></i> Lose &lt;{{ survive_pts }}</span>
+    <span style="color:var(--survive-color);"><i data-lucide="shield" class="td-icon-inline lucide"></i> Survive {{ survive_pts }}–{{ win_pts|add:"-1" }}</span>
+    <span style="color:var(--win-color);"><i data-lucide="trophy" class="td-icon-inline lucide"></i> Win {{ win_pts }}+</span>
+  </div>
+</div>
+
+<!-- ── Task Table ── -->
+<div class="td-task-card">
+  <div class="td-task-card__head">
+    <div class="td-task-card__title"><i data-lucide="list-checks" class="lucide"></i> Today's Tasks</div>
+    <div style="display:flex;align-items:center;gap:0.9rem;">
+      <span class="td-meta">Win = {{ win_pts }}XP | Survive = {{ survive_pts }}XP | Level {{ user.level }}</span>
+      <button type="button" class="td-filter-btn"><i data-lucide="filter" class="lucide"></i> Filter</button>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="task-table">
+      <thead>
+        <tr>
+          <th style="width:38%">Task</th>
+          <th style="width:15%; text-align:center;">Priority</th>
+          <th style="width:10%; text-align:center;">XP</th>
+          <th style="width:12%; text-align:center;">Status</th>
+          <th style="width:25%; text-align:center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="task-tbody">
+
+        {% if selected_date >= today %}
+        <tr class="add-row" id="add-row">
+          <td><input type="text" id="new-task-title" placeholder="Add a task..." class="table-input" /></td>
+          <td style="text-align:center;">
+            <select id="new-task-priority" class="table-select">
+              <option value="5">★★★★★</option>
+              <option value="4">★★★★☆</option>
+              <option value="3" selected>★★★☆☆</option>
+              <option value="2">★★☆☆☆</option>
+              <option value="1">★☆☆☆☆</option>
+            </select>
+          </td>
+          <td style="text-align:center; color:var(--text-secondary);">—</td>
+          <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
+          <td style="text-align:center;">
+            <button type="button" class="btn" id="add-task-btn" style="padding:0.35rem 1.1rem; font-size:0.85rem;display:inline-flex;align-items:center;gap:0.3rem;">
+              <i data-lucide="plus" class="td-icon-inline lucide"></i> Add
+            </button>
+          </td>
+        </tr>
+        {% endif %}
+
+        {% for task in pending %}
+        <tr class="task-row" id="task-{{ task.id }}" data-points="{{ task.get_points }}">
+          <td class="task-name">{{ task.title }}</td>
+          <td style="text-align:center;"><span class="stars-cell">{{ task.stars }}</span></td>
+          <td style="text-align:center;"><span class="pts-badge pts-positive">+{{ task.get_points }}</span></td>
+          <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
+          <td style="text-align:center;">
+            <div class="task-action-circles">
+              {% if is_today %}
+                <button class="task-circle task-circle--done" onclick="doTask({{ task.id }}, 'complete')" title="Mark done" aria-label="Mark done"><i data-lucide="check" class="td-icon-inline lucide"></i></button>
+                <button class="task-circle task-circle--skip" onclick="doTask({{ task.id }}, 'skip')" title="Skip" aria-label="Skip"><i data-lucide="x" class="td-icon-inline lucide"></i></button>
+                <a href="{% url 'delete_task' task.id %}" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="td-icon-inline lucide"></i></a>
+              {% elif selected_date > today %}
+                <a href="{% url 'delete_task' task.id %}" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="td-icon-inline lucide"></i></a>
+              {% else %}
+                <span style="font-size:0.78rem;color:var(--text-secondary);">Read only</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+
+        {% for task in completed %}
+        <tr class="task-row task-done-row" id="task-{{ task.id }}" data-points="{{ task.get_points }}">
+          <td class="task-name" style="text-decoration:line-through; opacity:0.5;">{{ task.title }}</td>
+          <td style="text-align:center; opacity:0.5;"><span class="stars-cell">{{ task.stars }}</span></td>
+          <td style="text-align:center;"><span class="pts-badge" style="background:#10b98122;color:var(--win-color);">+{{ task.get_points }}</span></td>
+          <td style="text-align:center;"><span class="status-badge badge-done"><i data-lucide="check" class="td-icon-inline lucide"></i> Done</span></td>
+          <td style="text-align:center;">
+            {% if is_today %}
+              <button class="task-circle task-circle--undo" onclick="undoTask({{ task.id }})" title="Undo" aria-label="Undo"><i data-lucide="undo-2" class="td-icon-inline lucide"></i></button>
+            {% else %}
+              <span style="font-size:0.78rem;color:var(--text-secondary);">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+
+        {% for task in skipped %}
+        <tr class="task-row task-skip-row" id="task-{{ task.id }}" data-points="{{ task.get_points }}">
+          <td class="task-name" style="opacity:0.4;">{{ task.title }}</td>
+          <td style="text-align:center; opacity:0.4;"><span class="stars-cell">{{ task.stars }}</span></td>
+          <td style="text-align:center;"><span class="pts-badge pts-negative">−3</span></td>
+          <td style="text-align:center;"><span class="status-badge badge-skip"><i data-lucide="skip-forward" class="td-icon-inline lucide"></i> Skipped</span></td>
+          <td style="text-align:center;">
+            {% if is_today %}
+              <button class="task-circle task-circle--undo" onclick="undoTask({{ task.id }})" title="Undo" aria-label="Undo"><i data-lucide="undo-2" class="td-icon-inline lucide"></i></button>
+            {% else %}
+              <span style="font-size:0.78rem;color:var(--text-secondary);">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+
+        {% if not tasks %}
+        <tr id="empty-tasks-row">
+          <td colspan="5">
+            <div class="td-empty">
+              <i data-lucide="clipboard-list" class="lucide td-empty-ic" style="width:44px;height:44px;color:var(--text-muted);margin:0 auto 0.6rem;display:block;"></i>
+              {% if selected_date > today %}No tasks planned — add one above.{% else %}No tasks added yet.{% endif %}<br>
+              <span style="font-size:0.8rem;">Add a task to get started.</span>
+            </div>
+          </td>
+        </tr>
+        {% endif %}
+
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Level progress ring removed along with the Level stat card.
+</script>
+<script>
+const csrfToken = '{{ csrf_token }}';
+const WIN_PTS   = {{ win_pts }};
+const IS_TODAY  = {% if is_today %}true{% else %}false{% endif %};
+const IS_FUTURE = {% if selected_date > today %}true{% else %}false{% endif %};
+
+function starsFor(n) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
+
+function buildTaskRow(t) {
+  let actions;
+  if (IS_TODAY) {
+    actions = `
+      <div class="task-action-circles">
+        <button class="task-circle task-circle--done" onclick="doTask(${t.task_id}, 'complete')" title="Mark done" aria-label="Mark done"><i data-lucide="check" class="td-icon-inline lucide"></i></button>
+        <button class="task-circle task-circle--skip" onclick="doTask(${t.task_id}, 'skip')" title="Skip" aria-label="Skip"><i data-lucide="x" class="td-icon-inline lucide"></i></button>
+        <a href="/dashboard/delete/${t.task_id}/" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="td-icon-inline lucide"></i></a>
+      </div>`;
+  } else if (IS_FUTURE) {
+    actions = `<a href="/dashboard/delete/${t.task_id}/" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="td-icon-inline lucide"></i></a>`;
+  } else {
+    actions = `<span style="font-size:0.78rem;color:var(--text-secondary);">Read only</span>`;
+  }
+
+  const tr = document.createElement('tr');
+  tr.className = 'task-row';
+  tr.id = `task-${t.task_id}`;
+  tr.dataset.points = t.points;
+  tr.innerHTML = `
+    <td class="task-name">${t.title}</td>
+    <td style="text-align:center;"><span class="stars-cell">${starsFor(t.priority)}</span></td>
+    <td style="text-align:center;"><span class="pts-badge pts-positive">+${t.points}</span></td>
+    <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
+    <td style="text-align:center;">${actions}</td>
+  `;
+  return tr;
+}
+
+const ADD_TASK_URL = "{% url 'add_task' %}";
+const SELECTED_DATE = "{{ selected_date|date:'Y-m-d' }}";
+
+async function submitNewTask() {
+  const titleInput = document.getElementById('new-task-title');
+  const priorityEl = document.getElementById('new-task-priority');
+  const addBtn     = document.getElementById('add-task-btn');
+  const title = titleInput.value.trim();
+  if (!title) { titleInput.focus(); return; }
+
+  addBtn.disabled = true;
+
+  const body = new URLSearchParams();
+  body.set('title', title);
+  body.set('priority', priorityEl.value);
+  body.set('selected_date', SELECTED_DATE);
+
+  try {
+    const res = await fetch(ADD_TASK_URL, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    });
+    const data = await res.json();
+
+    if (!data.ok) {
+      alert(data.error || 'Could not add task.');
+      addBtn.disabled = false;
+      return;
+    }
+
+    const emptyRow = document.getElementById('empty-tasks-row');
+    if (emptyRow) emptyRow.remove();
+
+    const newRow = buildTaskRow(data);
+    newRow.style.opacity = '0';
+    document.getElementById('add-row').after(newRow);
+    requestAnimationFrame(() => { newRow.style.transition = 'opacity 0.25s ease'; newRow.style.opacity = '1'; });
+
+    titleInput.value = '';
+    titleInput.focus();
+
+    document.getElementById('total-points').textContent = data.points_total;
+    updateTaskCounts();
+    const winPts = data.win_pts || WIN_PTS;
+    const pct = Math.min(Math.max(data.points_total / winPts * 100, 0), 100);
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-label').textContent = data.points_total + '/' + winPts;
+
+    const doneCountEl = document.getElementById('tasks-done-count');
+    if (doneCountEl) {
+      const allRows = document.querySelectorAll('.task-row').length;
+      const doneRows = document.querySelectorAll('.task-done-row').length;
+      doneCountEl.textContent = `${doneRows} / ${allRows}`;
+    }
+    if (window.refreshIcons) window.refreshIcons();
+
+  } catch (err) {
+    alert('Something went wrong adding the task.');
+  } finally {
+    addBtn.disabled = false;
+  }
+}
+
+const addBtnEl = document.getElementById('add-task-btn');
+if (addBtnEl) {
+  addBtnEl.addEventListener('click', submitNewTask);
+  const titleInputEl = document.getElementById('new-task-title');
+  titleInputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitNewTask(); }
+  });
+}
+
+const levelUpOverlay = document.getElementById('level-up-overlay');
+const levelUpClose   = document.getElementById('level-up-close');
+if (levelUpClose) {
+  levelUpClose.addEventListener('click', () => levelUpOverlay.remove());
+}
+
+function updateTaskCounts() {
+  const completedEl = document.getElementById('completed-count');
+  const skippedEl = document.getElementById('skipped-count');
+  if (completedEl) completedEl.textContent = document.querySelectorAll('.task-done-row').length;
+  if (skippedEl) skippedEl.textContent = document.querySelectorAll('.task-skip-row').length;
+}
+
+async function doTask(taskId, action) {
+  const url = action === 'complete'
+    ? `/dashboard/complete/${taskId}/`
+    : `/dashboard/skip/${taskId}/`;
+
+  const res  = await fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' }
+  });
+  const data = await res.json();
+
+  const row = document.getElementById(`task-${taskId}`);
+  if (row) {
+    const isDone = action === 'complete';
+    row.classList.add(isDone ? 'task-done-row' : 'task-skip-row');
+
+    const nameCell = row.children[0];
+    if (nameCell) {
+      nameCell.style.textDecoration = isDone ? 'line-through' : 'none';
+      nameCell.style.opacity = isDone ? '0.5' : '0.4';
+    }
+    const starsCell = row.children[1];
+    if (starsCell) starsCell.style.opacity = isDone ? '0.5' : '0.4';
+
+    const ptsCell = row.children[2];
+    if (ptsCell) {
+      ptsCell.innerHTML = isDone
+        ? `<span class="pts-badge" style="background:#10b98122;color:var(--win-color);">+${data.earned ?? ''}</span>`
+        : `<span class="pts-badge pts-negative">−${data.deducted ?? 3}</span>`;
+    }
+    const statusCell = row.children[3];
+    if (statusCell) statusCell.innerHTML = isDone
+      ? '<span class="status-badge badge-done"><i data-lucide="check" class="td-icon-inline lucide"></i> Done</span>'
+      : '<span class="status-badge badge-skip"><i data-lucide="skip-forward" class="td-icon-inline lucide"></i> Skipped</span>';
+
+    const actionCell = row.children[4];
+    if (actionCell) actionCell.innerHTML =
+      `<button class="task-circle task-circle--undo" onclick="undoTask(${taskId})" title="Undo" aria-label="Undo"><i data-lucide="undo-2" class="td-icon-inline lucide"></i></button>`;
+
+    if (window.refreshIcons) window.refreshIcons();
+  }
+
+  updateDashboardStats(data);
+  updateTaskCounts();
+}
+
+async function undoTask(taskId) {
+  const res = await fetch(`/dashboard/undo/${taskId}/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' }
+  });
+  const data = await res.json();
+
+  const row = document.getElementById(`task-${taskId}`);
+  if (row) {
+    row.classList.remove('task-done-row', 'task-skip-row');
+    const nameCell = row.children[0];
+    if (nameCell) { nameCell.style.textDecoration = 'none'; nameCell.style.opacity = '1'; }
+    const starsCell = row.children[1];
+    if (starsCell) starsCell.style.opacity = '1';
+    const ptsCell = row.children[2];
+    if (ptsCell) ptsCell.innerHTML = `<span class="pts-badge pts-positive">+${row.dataset.points}</span>`;
+    const statusCell = row.children[3];
+    if (statusCell) statusCell.innerHTML = '<span class="status-badge badge-pending">Pending</span>';
+    const actionCell = row.children[4];
+    if (actionCell) actionCell.innerHTML = `
+      <div class="task-action-circles">
+        <button class="task-circle task-circle--done" onclick="doTask(${taskId}, 'complete')" title="Mark done" aria-label="Mark done"><i data-lucide="check" class="td-icon-inline lucide"></i></button>
+        <button class="task-circle task-circle--skip" onclick="doTask(${taskId}, 'skip')" title="Skip" aria-label="Skip"><i data-lucide="x" class="td-icon-inline lucide"></i></button>
+        <a href="/dashboard/delete/${taskId}/" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="td-icon-inline lucide"></i></a>
+      </div>`;
+    if (window.refreshIcons) window.refreshIcons();
+  }
+
+  updateDashboardStats(data);
+  updateTaskCounts();
+}
+
+function updateDashboardStats(data) {
+  document.getElementById('total-points').textContent = data.points;
+
+  const doneCountEl = document.getElementById('tasks-done-count');
+  if (doneCountEl) {
+    const allRows  = document.querySelectorAll('.task-row').length;
+    const doneRows = document.querySelectorAll('.task-done-row').length;
+    doneCountEl.textContent = `${doneRows} / ${allRows}`;
+  }
+
+  const winPts = data.win_pts || WIN_PTS;
+  const pct    = Math.min(Math.max(data.points / winPts * 100, 0), 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = data.points + '/' + winPts;
+}
+</script>
+{% endblock %}

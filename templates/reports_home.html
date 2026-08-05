@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block title %}Reports — Life Is Simulation{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+  <div>
+    <h1 style="font-size:1.7rem;color:var(--text-primary);margin-bottom:0.2rem;">📊 Reports</h1>
+    <p style="color:var(--text-secondary);font-size:0.9rem;">{{ start_date|date:"d M Y" }} — {{ today|date:"d M Y" }}</p>
+  </div>
+  <div style="display:flex;gap:0.5rem;">
+    {% for r, label in range_options %}
+    <a href="?range={{ r }}"
+       style="padding:0.45rem 1rem;border-radius:8px;font-size:0.85rem;text-decoration:none;
+              border:1px solid {% if days == r %}var(--accent){% else %}var(--border){% endif %};
+              color:{% if days == r %}var(--accent){% else %}var(--text-secondary){% endif %};
+              background:{% if days == r %}var(--accent-glow){% else %}transparent{% endif %};">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem;">
+  <div class="card" style="text-align:center;border-color:var(--accent)44;">
+    <div style="font-size:2rem;font-weight:800;color:var(--accent);">{{ grand_total }}</div>
+    <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem;">Total XP</div>
+  </div>
+  <div class="card" style="text-align:center;border-color:#4cff9144;">
+    <div style="font-size:2rem;font-weight:800;color:#4cff91;">{{ total_task_pts }}</div>
+    <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem;">Task Points</div>
+  </div>
+  <div class="card" style="text-align:center;border-color:#f5c84244;">
+    <div style="font-size:2rem;font-weight:800;color:#f5c842;">{{ total_wp_pts }}</div>
+    <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem;">Willpower Pts</div>
+  </div>
+  <div class="card" style="text-align:center;border-color:#ff9f4044;">
+    <div style="font-size:2rem;font-weight:800;color:#ff9f40;">{{ total_diet_pts }}</div>
+    <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem;">Diet Points</div>
+  </div>
+  <div class="card" style="text-align:center;border-color:#4cff9144;">
+    <div style="font-size:2rem;font-weight:800;color:#4cff91;">{{ win_days }}</div>
+    <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem;">Win Days</div>
+  </div>
+  <div class="card" style="text-align:center;border-color:#f5c84244;">
+    <div style="font-size:2rem;font-weight:800;color:#f5c842;">{{ cur_streak }}</div>
+    <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem;">Cur Streak</div>
+  </div>
+  <div class="card" style="text-align:center;border-color:var(--accent)44;">
+    <div style="font-size:2rem;font-weight:800;color:var(--accent);">{{ avg_pts }}</div>
+    <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem;">Avg pts/day</div>
+  </div>
+  <div class="card" style="text-align:center;border-color:var(--accent)44;">
+    <div style="font-size:1.5rem;font-weight:800;color:var(--accent);">{{ best_pts }}</div>
+    <div style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem;">Best ({{ best_day }})</div>
+  </div>
+</div>
+
+<!-- Row 1: Stacked Bar + Pie -->
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:1rem;margin-bottom:1rem;">
+  <div class="card">
+    <div class="card-title">📅 Daily Points Breakdown</div>
+    <div style="position:relative;height:280px;">
+      <canvas id="stackedBar"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🥧 Points by Source</div>
+    <div style="position:relative;height:200px;margin-bottom:1rem;">
+      <canvas id="pieChart"></canvas>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.82rem;">
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <span style="width:12px;height:12px;border-radius:3px;background:#4cff91;display:inline-block;flex-shrink:0;"></span>
+        <span style="color:var(--text-secondary);">Tasks</span>
+        <span style="margin-left:auto;color:#4cff91;font-weight:600;">{{ total_task_pts }} pts</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <span style="width:12px;height:12px;border-radius:3px;background:#f5c842;display:inline-block;flex-shrink:0;"></span>
+        <span style="color:var(--text-secondary);">Willpower</span>
+        <span style="margin-left:auto;color:#f5c842;font-weight:600;">{{ total_wp_pts }} pts</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <span style="width:12px;height:12px;border-radius:3px;background:#ff9f40;display:inline-block;flex-shrink:0;"></span>
+        <span style="color:var(--text-secondary);">Diet</span>
+        <span style="margin-left:auto;color:#ff9f40;font-weight:600;">{{ total_diet_pts }} pts</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 2: Line chart + Donut -->
+<div style="display:grid;grid-template-columns:3fr 1fr;gap:1rem;margin-bottom:1rem;">
+  <div class="card">
+    <div class="card-title">📈 Total Points Trend</div>
+    <div style="position:relative;height:240px;">
+      <canvas id="lineChart"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🎯 Day Results</div>
+    <div style="position:relative;height:160px;margin-bottom:1rem;">
+      <canvas id="donutChart"></canvas>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.4rem;font-size:0.82rem;">
+      <div style="display:flex;justify-content:space-between;">
+        <span style="color:#4cff91;">✅ Win</span>
+        <span style="color:#4cff91;font-weight:600;">{{ win_days }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="color:#f5c842;">⚠️ Survive</span>
+        <span style="color:#f5c842;font-weight:600;">{{ survive_days }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="color:#ff4c6b;">❌ Lose</span>
+        <span style="color:#ff4c6b;font-weight:600;">{{ lose_days }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 3: Streak -->
+<div class="card" style="margin-bottom:1rem;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+    <div class="card-title" style="margin:0;">🔥 Streak History</div>
+    <div style="font-size:0.85rem;color:var(--text-secondary);">
+      Max: <span style="color:var(--gold);font-weight:700;">{{ max_streak }}</span>
+      &nbsp;·&nbsp;
+      Current: <span style="color:#4cff91;font-weight:700;">{{ cur_streak }}</span>
+    </div>
+  </div>
+  <div style="position:relative;height:180px;">
+    <canvas id="streakChart"></canvas>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+Chart.defaults.color       = '#9896a8';
+Chart.defaults.borderColor = '#2a2d42';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+
+const labels    = {{ date_labels|safe }};
+const taskPts   = {{ task_pts|safe }};
+const wpPts     = {{ wp_pts|safe }};
+const dietPts   = {{ diet_pts|safe }};
+const totalPts  = {{ total_pts|safe }};
+const pieData   = {{ pie_data|safe }};
+const donutData = {{ donut_data|safe }};
+const streakD   = {{ streak_data|safe }};
+const grid      = '#2a2d4266';
+
+// 1. Stacked Bar
+new Chart(document.getElementById('stackedBar'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [
+      { label: 'Tasks',     data: taskPts,  backgroundColor: '#4cff9188', borderColor: '#4cff91', borderWidth:1, borderRadius:3 },
+      { label: 'Willpower', data: wpPts,    backgroundColor: '#f5c84288', borderColor: '#f5c842', borderWidth:1, borderRadius:3 },
+      { label: 'Diet',      data: dietPts,  backgroundColor: '#ff9f4088', borderColor: '#ff9f40', borderWidth:1, borderRadius:3 },
+    ],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position:'top', labels:{ boxWidth:12, padding:12 } }, tooltip: { mode:'index' } },
+    scales: {
+      x: { stacked:true, grid:{ color:grid }, ticks:{ maxTicksLimit:10, maxRotation:0 } },
+      y: { stacked:true, grid:{ color:grid }, beginAtZero:true },
+    },
+  },
+});
+
+// 2. Pie
+new Chart(document.getElementById('pieChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Tasks','Willpower','Diet'],
+    datasets: [{ data: pieData, backgroundColor:['#4cff9188','#f5c84288','#ff9f4088'], borderColor:['#4cff91','#f5c842','#ff9f40'], borderWidth:2, hoverOffset:8 }],
+  },
+  options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, cutout:'65%' },
+});
+
+// 3. Line
+new Chart(document.getElementById('lineChart'), {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Total Points', data: totalPts,
+      borderColor: '#7c6fff', backgroundColor: '#7c6fff22', borderWidth:2.5,
+      pointBackgroundColor: totalPts.map(v => v>=40?'#4cff91':v>=20?'#f5c842':v>0?'#ff4c6b':'#2a2d42'),
+      pointRadius:4, pointHoverRadius:7, fill:true, tension:0.4,
+    }],
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:false } },
+    scales: {
+      x: { grid:{ color:grid }, ticks:{ maxTicksLimit:10, maxRotation:0 } },
+      y: { grid:{ color:grid }, beginAtZero:true },
+    },
+  },
+});
+
+// 4. Donut
+new Chart(document.getElementById('donutChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Win','Survive','Lose'],
+    datasets: [{ data: donutData, backgroundColor:['#4cff9188','#f5c84288','#ff4c6b88'], borderColor:['#4cff91','#f5c842','#ff4c6b'], borderWidth:2, hoverOffset:6 }],
+  },
+  options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, cutout:'60%' },
+});
+
+// 5. Streak
+new Chart(document.getElementById('streakChart'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Streak', data: streakD,
+      backgroundColor: streakD.map(v => v>=7?'#f5c842cc':v>=3?'#7c6fffcc':'#4cff9188'),
+      borderRadius:4, borderSkipped:false,
+    }],
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: ctx => ` ${ctx.parsed.y} day streak` } } },
+    scales: {
+      x: { grid:{ color:grid }, ticks:{ maxTicksLimit:10, maxRotation:0 } },
+      y: { grid:{ color:grid }, beginAtZero:true, ticks:{ stepSize:1 } },
+    },
+  },
+});
+</script>
+{% endblock %}

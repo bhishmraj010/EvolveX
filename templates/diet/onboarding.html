@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Choose Your Goal — Diet{% endblock %}
+
+{% block content %}
+<div style="max-width:850px;margin:0 auto;">
+
+  <div style="text-align:center;margin-bottom:2.5rem;">
+    <h1 style="font-size:2.2rem;color:var(--accent);margin-bottom:0.5rem;">🥗 Diet Tracker Setup</h1>
+    <p style="color:var(--text-secondary);font-size:1rem;">Choose your physique goal — AI will build a personalized plan for you.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.25rem;">
+    {% for key, card in physique_cards.items %}
+    <a href="{% url 'diet_onboarding_details' %}?goal={{ key }}"
+       class="physique-card"
+       style="--card-color:{{ card.color }};">
+      <div class="physique-card-emoji">{{ card.emoji }}</div>
+      <div class="physique-card-title">{{ card.title }}</div>
+      <div class="physique-card-desc">{{ card.desc }}</div>
+      <div class="physique-card-arrow">Select →</div>
+    </a>
+    {% endfor %}
+  </div>
+
+</div>
+
+<style>
+.physique-card {
+  text-decoration: none;
+  display: block;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  transition: all 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+.physique-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--card-color);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.physique-card:hover {
+  border-color: var(--card-color);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px color-mix(in srgb, var(--card-color) 25%, transparent);
+}
+.physique-card:hover::before { opacity: 0.06; }
+.physique-card-emoji {
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
+  position: relative;
+}
+.physique-card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  position: relative;
+}
+.physique-card-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  position: relative;
+}
+.physique-card-arrow {
+  margin-top: 1rem;
+  font-size: 0.82rem;
+  color: var(--card-color);
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s;
+  position: relative;
+}
+.physique-card:hover .physique-card-arrow { opacity: 1; }
+</style>
+{% endblock %}

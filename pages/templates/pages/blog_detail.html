@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} — EvolveX Blog{% endblock %}
+{% block body_class %}theme-obsidian{% endblock %}
+
+{% block extra_head %}
+<style>
+  .pg-post-wrap{max-width:760px;margin:0 auto;}
+  .pg-back{display:inline-flex;align-items:center;gap:0.3rem;font-size:0.82rem;color:var(--text-secondary);text-decoration:none;margin-bottom:1.2rem;}
+  .pg-back:hover{color:var(--accent);}
+
+  .pg-post-hero-img{width:100%;max-height:340px;object-fit:cover;border-radius:16px;margin-bottom:1.4rem;border:1px solid var(--border);}
+  .pg-post-hero-fallback{
+    width:100%;height:220px;border-radius:16px;margin-bottom:1.4rem;border:1px solid var(--border);
+    background:linear-gradient(135deg,var(--accent)33,var(--cyan)22);display:flex;align-items:center;justify-content:center;
+  }
+
+  .pg-post-meta{font-size:0.78rem;color:var(--text-muted);display:flex;gap:0.6rem;align-items:center;margin-bottom:0.6rem;}
+  .pg-post-h1{font-size:1.7rem;font-weight:800;color:var(--text-primary);line-height:1.3;margin-bottom:1.2rem;}
+
+  .pg-post-content{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:1.5rem 1.6rem;backdrop-filter:blur(10px);
+    color:var(--text-secondary);font-size:0.92rem;line-height:1.85;white-space:pre-line;
+  }
+
+  .pg-related{margin-top:2.2rem;}
+  .pg-related h3{font-size:1rem;font-weight:700;color:var(--text-primary);margin-bottom:0.9rem;}
+  .pg-related-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.9rem;}
+  .pg-related-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:0.9rem 1rem;text-decoration:none;
+    display:block;transition:border-color .2s ease,transform .2s ease;}
+  .pg-related-card:hover{border-color:var(--accent);transform:translateY(-2px);}
+  .pg-related-card .t{font-size:0.85rem;font-weight:700;color:var(--text-primary);}
+  .pg-related-card .d{font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="pg-post-wrap">
+  <a href="{% url 'blog_list' %}" class="pg-back">
+    <i data-lucide="arrow-left" class="lucide" style="width:14px;height:14px;"></i> Back to Blog
+  </a>
+
+  {% if post.cover_image %}
+    <img class="pg-post-hero-img" src="{{ post.cover_image.url }}" alt="{{ post.title }}">
+  {% else %}
+    <div class="pg-post-hero-fallback">
+      <i data-lucide="newspaper" class="lucide" style="color:var(--accent);width:40px;height:40px;"></i>
+    </div>
+  {% endif %}
+
+  <div class="pg-post-meta">
+    <i data-lucide="calendar" class="lucide" style="width:13px;height:13px;"></i>
+    {{ post.published_at|date:"d M Y" }}
+    <span>·</span>
+    {{ post.reading_time_minutes }} min read
+    {% if post.author %}
+      <span>·</span>
+      <i data-lucide="user" class="lucide" style="width:13px;height:13px;"></i>
+      {{ post.author.get_full_name|default:post.author.username }}
+    {% endif %}
+  </div>
+
+  <div class="pg-post-h1">{{ post.title }}</div>
+
+  <div class="pg-post-content">{{ post.content }}</div>
+
+  {% if related %}
+  <div class="pg-related">
+    <h3>More posts</h3>
+    <div class="pg-related-grid">
+      {% for r in related %}
+        <a class="pg-related-card" href="{% url 'blog_detail' r.slug %}">
+          <div class="t">{{ r.title }}</div>
+          <div class="d">{{ r.published_at|date:"d M Y" }}</div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

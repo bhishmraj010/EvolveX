@@ -1,0 +1,326 @@
+{% extends 'base.html' %}
+{% block title %}Choose Your Plan — EvolveX{% endblock %}
+
+{% block content %}
+<div class="auth-container" style="max-width:1180px;">
+
+  <div style="text-align:center;margin-bottom:1.6rem;">
+    <h1 style="font-size:2.2rem;font-weight:800;margin-bottom:0.5rem;">
+      Choose Your <span style="background:linear-gradient(135deg,#8b5cf6,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent;">Perfect Plan</span>
+    </h1>
+    <p style="color:var(--text-secondary);">
+      Unlock your full potential with <strong style="color:var(--text-primary);">EvolveX Premium</strong>
+    </p>
+  </div>
+
+  {% if plans.0.promo_active %}
+  <div style="display:flex;justify-content:center;margin-bottom:2rem;">
+    <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.4);border-radius:999px;padding:0.5rem 1.2rem;font-size:0.85rem;">
+      <i data-lucide="sparkles" class="lucide" style="width:16px;height:16px;color:#a78bfa;"></i>
+      Special Offer Ends On:
+      <i data-lucide="calendar" class="lucide" style="width:15px;height:15px;color:var(--text-secondary);"></i>
+      <strong>19th Aug 2026</strong>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if active_sub %}
+  <div class="card glass" style="text-align:center;margin-bottom:1.6rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+    <i data-lucide="badge-check" class="lucide" style="width:18px;height:18px;color:var(--grad-cyan);"></i>
+    <strong style="color:var(--grad-cyan);">
+      You're subscribed: {{ active_sub.get_plan_code_display }}
+      {% if active_sub.is_lifetime %} (Lifetime access){% elif active_sub.expires_at %} — active until {{ active_sub.expires_at|date:"M d, Y" }}{% endif %}
+    </strong>
+  </div>
+  {% endif %}
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.6rem;padding-top:0.8rem;">
+    {% for plan in plans %}
+    {% if plan.code == 'quarterly' %}
+      {% with accent="#22c55e" accent_soft="rgba(34,197,94,0.1)" icon="clock" %}
+      <div class="card glass" style="padding:2rem 1.6rem;position:relative;overflow:visible;border:1px solid {{ accent }};box-shadow:0 0 0 1px {{ accent }}, 0 8px 32px {{ accent_soft }};">
+        {% if plan.promo_active %}
+        <div style="position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:{{ accent }};color:#fff;padding:0.3rem 1rem;border-radius:999px;font-size:0.72rem;font-weight:700;letter-spacing:0.03em;white-space:nowrap;">
+          BEST VALUE
+        </div>
+        {% endif %}
+
+        <div style="width:52px;height:52px;border-radius:14px;background:{{ accent_soft }};display:flex;align-items:center;justify-content:center;margin-bottom:1rem;">
+          <i data-lucide="{{ icon }}" class="lucide" style="width:26px;height:26px;color:{{ accent }};"></i>
+        </div>
+
+        <h3 style="margin-bottom:0.2rem;color:{{ accent }};">{{ plan.name }}</h3>
+        <p style="color:var(--text-secondary);font-size:0.85rem;min-height:1.4em;margin-bottom:1rem;">{{ plan.tagline }}</p>
+
+        <div style="font-size:2.6rem;font-weight:800;line-height:1;color:{{ accent }};">{{ plan.currency_symbol }}{{ plan.price }}</div>
+        <div style="color:var(--text-secondary);font-size:0.85rem;margin-top:0.3rem;margin-bottom:1.2rem;">
+          {% if plan.promo_active %}/ 3 months{% else %}/ 3 months{% endif %}
+        </div>
+
+        {% if plan.promo_active %}
+        <div style="background:{{ accent_soft }};border:1px solid {{ accent }};border-radius:10px;padding:0.9rem;text-align:center;margin-bottom:1.2rem;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:0.4rem;font-size:0.78rem;color:{{ accent }};font-weight:600;margin-bottom:0.2rem;">
+            <i data-lucide="gift" class="lucide" style="width:15px;height:15px;"></i> SPECIAL OFFER
+          </div>
+          <div style="font-size:0.78rem;color:var(--text-secondary);">Buy before 19th Aug 2026</div>
+          <div style="font-size:0.9rem;font-weight:700;color:{{ accent }};">Get 1 YEAR ACCESS</div>
+        </div>
+        {% endif %}
+
+        <ul style="list-style:none;padding:0;margin:0 0 1.4rem;display:flex;flex-direction:column;gap:0.6rem;">
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Everything in Monthly Plan</li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> 3 Months Premium Access</li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Advanced Analytics</li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Custom Reminders</li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Smart AI Recommendations</li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Export &amp; Backup Data</li>
+        </ul>
+
+        <button class="buy-btn" data-plan="{{ plan.code }}" style="width:100%;padding:0.9rem;border:none;border-radius:10px;background:{{ accent }};color:#fff;font-weight:700;font-size:0.95rem;cursor:pointer;">
+          Get 3 Months Plan
+        </button>
+        <p style="text-align:center;color:var(--text-muted);font-size:0.72rem;margin-top:0.7rem;display:flex;align-items:center;justify-content:center;gap:0.3rem;">
+          <i data-lucide="shield-check" class="lucide" style="width:13px;height:13px;"></i> 7-Day Money Back Guarantee
+        </p>
+      </div>
+      {% endwith %}
+
+    {% elif plan.code == 'yearly' %}
+      {% with accent="#f59e0b" accent_soft="rgba(245,158,11,0.1)" icon="crown" %}
+      <div class="card glass" style="padding:2rem 1.6rem;position:relative;overflow:visible;border:1px solid {{ accent }};box-shadow:0 0 0 1px {{ accent }}, 0 8px 32px {{ accent_soft }};">
+        {% if plan.promo_active %}
+        <div style="position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:{{ accent }};color:#fff;padding:0.3rem 1rem;border-radius:999px;font-size:0.72rem;font-weight:700;letter-spacing:0.03em;white-space:nowrap;">
+          LIMITED TIME OFFER
+        </div>
+        {% endif %}
+
+        <div style="width:52px;height:52px;border-radius:14px;background:{{ accent_soft }};display:flex;align-items:center;justify-content:center;margin-bottom:1rem;">
+          <i data-lucide="{{ icon }}" class="lucide" style="width:26px;height:26px;color:{{ accent }};"></i>
+        </div>
+
+        <h3 style="margin-bottom:0.2rem;color:{{ accent }};">{{ plan.name }}</h3>
+        <p style="color:var(--text-secondary);font-size:0.85rem;min-height:1.4em;margin-bottom:1rem;">{{ plan.tagline }}</p>
+
+        <div style="font-size:2.6rem;font-weight:800;line-height:1;color:{{ accent }};">{{ plan.currency_symbol }}{{ plan.price }}</div>
+        <div style="color:var(--text-secondary);font-size:0.85rem;margin-top:0.3rem;margin-bottom:1.2rem;">
+          {% if plan.effective_is_lifetime %}one-time · lifetime{% else %}/ year{% endif %}
+        </div>
+
+        {% if plan.promo_active %}
+        <div style="background:{{ accent_soft }};border:1px solid {{ accent }};border-radius:10px;padding:0.9rem;text-align:center;margin-bottom:1.2rem;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:0.4rem;font-size:0.78rem;color:{{ accent }};font-weight:600;margin-bottom:0.2rem;">
+            <i data-lucide="gift" class="lucide" style="width:15px;height:15px;"></i> SPECIAL OFFER
+          </div>
+          <div style="font-size:0.78rem;color:var(--text-secondary);">Buy before 19th Aug 2026</div>
+          <div style="font-size:0.9rem;font-weight:700;color:{{ accent }};">Get LIFETIME ACCESS</div>
+        </div>
+        {% endif %}
+
+        <ul style="list-style:none;padding:0;margin:0 0 1.4rem;display:flex;flex-direction:column;gap:0.6rem;">
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Everything in 3 Months Plan</li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> 1 Year Premium Access</li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;">
+            <i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i>
+            {% if plan.promo_active %}<strong style="color:{{ accent }};">Lifetime Free (Limited Time)</strong>{% else %}Lifetime access{% endif %}
+          </li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Early Access to New Features</li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Priority Support</li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Exclusive Premium Content</li>
+        </ul>
+
+        <button class="buy-btn" data-plan="{{ plan.code }}" style="width:100%;padding:0.9rem;border:none;border-radius:10px;background:linear-gradient(135deg,{{ accent }},#fb923c);color:#fff;font-weight:700;font-size:0.95rem;cursor:pointer;">
+          Get Annual Plan
+        </button>
+        <p style="text-align:center;color:var(--text-muted);font-size:0.72rem;margin-top:0.7rem;display:flex;align-items:center;justify-content:center;gap:0.3rem;">
+          <i data-lucide="shield-check" class="lucide" style="width:13px;height:13px;"></i> 7-Day Money Back Guarantee
+        </p>
+      </div>
+      {% endwith %}
+
+    {% else %}
+      {% with accent="#8b5cf6" accent_soft="rgba(139,92,246,0.1)" icon="calendar-days" %}
+      <div class="card glass" style="padding:2rem 1.6rem;position:relative;border:1px solid var(--border);">
+        <div style="width:52px;height:52px;border-radius:14px;background:{{ accent_soft }};display:flex;align-items:center;justify-content:center;margin-bottom:1rem;">
+          <i data-lucide="{{ icon }}" class="lucide" style="width:26px;height:26px;color:{{ accent }};"></i>
+        </div>
+
+        <h3 style="margin-bottom:0.2rem;color:{{ accent }};">{{ plan.name }}</h3>
+        <p style="color:var(--text-secondary);font-size:0.85rem;min-height:1.4em;margin-bottom:1rem;">{{ plan.tagline }}</p>
+
+        <div style="font-size:2.6rem;font-weight:800;line-height:1;color:{{ accent }};">{{ plan.currency_symbol }}{{ plan.price }}</div>
+        <div style="color:var(--text-secondary);font-size:0.85rem;margin-top:0.3rem;margin-bottom:0.6rem;">/ month</div>
+        <p style="color:var(--text-muted);font-size:0.75rem;padding-bottom:0.8rem;border-bottom:1px solid var(--border);margin-bottom:1.2rem;">
+          Billed monthly · Cancel anytime
+        </p>
+
+        <ul style="list-style:none;padding:0;margin:0 0 1.4rem;display:flex;flex-direction:column;gap:0.6rem;">
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Full Access to All Features</li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> AI Coach &amp; Smart Insights</li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Task Management &amp; Analytics</li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Daily Goals &amp; Habit Tracker</li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Priority Support</li>
+          <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Regular Updates</li>
+        </ul>
+
+        <button class="buy-btn" data-plan="{{ plan.code }}" style="width:100%;padding:0.9rem;border:none;border-radius:10px;background:{{ accent }};color:#fff;font-weight:700;font-size:0.95rem;cursor:pointer;">
+          Get Started Now
+        </button>
+        <p style="text-align:center;color:var(--text-muted);font-size:0.72rem;margin-top:0.7rem;display:flex;align-items:center;justify-content:center;gap:0.3rem;">
+          <i data-lucide="shield-check" class="lucide" style="width:13px;height:13px;"></i> 7-Day Money Back Guarantee
+        </p>
+      </div>
+      {% endwith %}
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  <div class="card glass" style="margin-top:2.4rem;padding:1.8rem;">
+    <h3 style="text-align:center;margin-bottom:1.4rem;color:var(--text-secondary);font-size:1.05rem;">
+      Why Upgrade to Premium?
+    </h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1.4rem;text-align:center;">
+      <div>
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(139,92,246,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 0.6rem;">
+          <i data-lucide="rocket" class="lucide" style="width:22px;height:22px;color:#8b5cf6;"></i>
+        </div>
+        <strong style="font-size:0.85rem;color:#a78bfa;">Boost Productivity</strong>
+        <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">Smart tools to get more done daily</p>
+      </div>
+      <div>
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(34,197,94,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 0.6rem;">
+          <i data-lucide="bar-chart-3" class="lucide" style="width:22px;height:22px;color:#22c55e;"></i>
+        </div>
+        <strong style="font-size:0.85rem;color:#4ade80;">Deep Insights</strong>
+        <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">AI-powered analytics &amp; progress tracking</p>
+      </div>
+      <div>
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(59,130,246,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 0.6rem;">
+          <i data-lucide="shield" class="lucide" style="width:22px;height:22px;color:#3b82f6;"></i>
+        </div>
+        <strong style="font-size:0.85rem;color:#60a5fa;">Secure &amp; Private</strong>
+        <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">Your data is 100% safe with us</p>
+      </div>
+      <div>
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(236,72,153,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 0.6rem;">
+          <i data-lucide="headphones" class="lucide" style="width:22px;height:22px;color:#ec4899;"></i>
+        </div>
+        <strong style="font-size:0.85rem;color:#f472b6;">Priority Support</strong>
+        <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">Get help when you need it most</p>
+      </div>
+      <div>
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 0.6rem;">
+          <i data-lucide="star" class="lucide" style="width:22px;height:22px;color:#f59e0b;"></i>
+        </div>
+        <strong style="font-size:0.85rem;color:#fbbf24;">Exclusive Benefits</strong>
+        <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">Premium content &amp; early feature access</p>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center;color:var(--text-muted);font-size:0.78rem;margin-top:1.6rem;display:flex;align-items:center;justify-content:center;gap:0.4rem;">
+    <i data-lucide="heart" class="lucide" style="width:14px;height:14px;"></i>
+    EvolveX is built to help you become the best version of yourself.
+  </p>
+
+  <!-- Gateway choice modal -->
+  <div id="gatewayModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;align-items:center;justify-content:center;">
+    <div class="card glass" style="max-width:340px;width:90%;text-align:center;padding:1.8rem;">
+      <h3 style="margin-bottom:1.1rem;">Pay with</h3>
+      <button id="payRazorpay" class="btn btn-primary" style="width:100%;margin-bottom:0.8rem;">Razorpay (Cards / UPI)</button>
+      <button id="payPaypal" style="width:100%;padding:0.7rem;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text-primary);cursor:pointer;">PayPal</button>
+      <div id="paypalContainer" style="margin-top:1rem;"></div>
+      <button id="closeModal" style="margin-top:1rem;background:none;border:none;color:var(--text-muted);cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD"></script>
+
+<script>
+function getCsrfToken() {
+  const match = document.cookie.match(/csrftoken=([^;]+)/);
+  return match ? match[1] : '';
+}
+
+let selectedPlan = null;
+const modal = document.getElementById('gatewayModal');
+const paypalContainer = document.getElementById('paypalContainer');
+let paypalRendered = false;
+
+document.querySelectorAll('.buy-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedPlan = btn.dataset.plan;
+    paypalContainer.innerHTML = '';
+    paypalRendered = false;
+    modal.style.display = 'flex';
+  });
+});
+document.getElementById('closeModal').addEventListener('click', () => { modal.style.display = 'none'; });
+
+document.getElementById('payRazorpay').addEventListener('click', async () => {
+  const resp = await fetch("{% url 'razorpay_create_order' %}", {
+    method: 'POST',
+    headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/x-www-form-urlencoded'},
+    body: `plan_code=${selectedPlan}`,
+  });
+  const data = await resp.json();
+  if (data.error) { alert(data.error); return; }
+
+  const rzp = new Razorpay({
+    key: data.key,
+    amount: data.amount,
+    currency: data.currency,
+    order_id: data.order_id,
+    name: 'EvolveX',
+    description: 'Subscription',
+    handler: async function (response) {
+      const verifyResp = await fetch("{% url 'razorpay_verify' %}", {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams(response).toString(),
+      });
+      const verifyData = await verifyResp.json();
+      if (verifyData.success) window.location.href = verifyData.redirect;
+      else alert('Payment verification failed: ' + verifyData.error);
+    },
+    theme: { color: '#8b5cf6' },
+  });
+  rzp.open();
+  modal.style.display = 'none';
+});
+
+document.getElementById('payPaypal').addEventListener('click', () => {
+  if (paypalRendered) return;
+  paypalRendered = true;
+  paypal.Buttons({
+    createOrder: async function () {
+      const resp = await fetch("{% url 'paypal_create_order' %}", {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `plan_code=${selectedPlan}`,
+      });
+      const data = await resp.json();
+      return data.order_id;
+    },
+    onApprove: async function (data) {
+      const resp = await fetch("{% url 'paypal_capture' %}", {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `order_id=${data.orderID}`,
+      });
+      const result = await resp.json();
+      if (result.success) window.location.href = result.redirect;
+      else alert('Payment failed: ' + result.error);
+    },
+  }).render('#paypalContainer');
+});
+
+// Re-render Lucide icons injected after initial page load (base.html usually
+// calls lucide.createIcons() on DOMContentLoaded — this covers any that
+// were added dynamically, safe no-op if lucide isn't present).
+if (window.lucide) { lucide.createIcons(); }
+</script>
+{% endblock %}

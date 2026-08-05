@@ -1,0 +1,372 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}AI Roadmap — EvolveX{% endblock %}
+{% block body_class %}theme-eclipse{% endblock %}
+
+{% block extra_head %}
+<style>
+  @keyframes rmFadeUp { from{opacity:0;transform:translateY(16px);} to{opacity:1;transform:translateY(0);} }
+  @keyframes rmGlowPulse { 0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.35);} 50%{box-shadow:0 0 0 10px rgba(124,58,237,0);} }
+  @keyframes rmTwinkle { 0%,100%{opacity:.2;} 50%{opacity:1;} }
+
+  /* ── Full-bleed hero with the portal artwork as background ── */
+  .rm-hero {
+    position: relative; width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw);
+    padding: 2rem 1.5rem 2.5rem; overflow: hidden; isolation: isolate;
+  }
+  .rm-hero::before {
+    content:''; position:absolute; inset:0; z-index:-2;
+    background: url("{% static 'images/roadmap-portal-bg.jpg' %}") center 30% / cover no-repeat;
+  }
+  .rm-hero::after {
+    content:''; position:absolute; inset:0; z-index:-1;
+    background:
+      linear-gradient(180deg, rgba(5,3,12,.55) 0%, rgba(5,3,12,.25) 22%, rgba(5,3,12,.55) 65%, rgba(5,3,12,.92) 100%),
+      radial-gradient(ellipse at 50% 15%, rgba(5,3,12,.1) 0%, rgba(5,3,12,.6) 75%);
+  }
+  .rm-star { position:absolute; border-radius:50%; background:#fff; z-index:0; animation: rmTwinkle ease-in-out infinite; pointer-events:none; }
+
+  .rm-onboard-wrap { max-width: 1180px; margin: 0 auto; position:relative; z-index:1; }
+
+  .rm-onboard-header { text-align: center; margin-bottom: 1.5rem; animation: rmFadeUp .5s ease both; }
+  .rm-badge-pill {
+    display:inline-flex; align-items:center; gap:.4rem; font-size:.72rem; font-weight:700; letter-spacing:.04em;
+    padding:.4rem .9rem; border-radius:999px; border:1px solid rgba(124,58,237,.4);
+    background: rgba(124,58,237,.12); color:#c4b5fd; margin-bottom:.8rem;
+  }
+  .rm-onboard-header h1 {
+    display:flex; align-items:center; justify-content:center; gap:.5rem; font-size:2.05rem; font-weight:800;
+  }
+  .rm-onboard-header h1 .accent {
+    background: linear-gradient(100deg, var(--accent-hover), #818cf8 60%, var(--grad-cyan,#22d3ee));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .rm-onboard-header p { color: var(--text-secondary); margin-top:.55rem; font-size:.9rem; max-width:560px; margin-left:auto; margin-right:auto; line-height:1.5; }
+
+  /* ── Main 2-column layout: form (wide) + includes sidebar ── */
+  .rm-layout { display:grid; grid-template-columns: 1.7fr 1fr; gap:1.4rem; align-items:start; margin-top:1.4rem; }
+  @media (max-width: 980px) { .rm-layout { grid-template-columns: 1fr; } }
+
+  .rm-form-card {
+    background: rgba(15,10,28,.62); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(124,58,237,.28); border-radius: 20px;
+    padding: 1.6rem 1.8rem; box-shadow: 0 20px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05);
+    animation: rmFadeUp .6s ease .1s both;
+  }
+
+  .rm-field { margin-bottom: .95rem; }
+  .rm-field label { display:flex; align-items:center; gap:.4rem; font-size:.8rem; color: var(--text-secondary); margin-bottom:.4rem; font-weight:600; }
+  .rm-input-wrap { position:relative; }
+  .rm-input-wrap .rm-input-icon {
+    position:absolute; left:.85rem; top:50%; transform:translateY(-50%); color: var(--accent-hover);
+    width:16px; height:16px; pointer-events:none; z-index:1;
+  }
+  .rm-input-wrap.rm-icon-right .rm-input-icon { left:auto; right:.9rem; }
+  .rm-field input, .rm-field select, .rm-field textarea {
+    width:100%; background: rgba(255,255,255,0.035); border:1px solid rgba(124,58,237,.22);
+    border-radius:11px; padding:.75rem .9rem; color:var(--text-primary); font-size:.9rem; font-family: inherit;
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+  }
+  .rm-input-wrap input, .rm-input-wrap select { padding-left: 2.5rem; }
+  .rm-input-wrap.rm-icon-right input { padding-left:.9rem; padding-right: 2.5rem; }
+  .rm-field select { cursor:pointer; appearance:none; -webkit-appearance:none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position: right .85rem center; }
+  .rm-field input:hover, .rm-field select:hover, .rm-field textarea:hover { border-color: rgba(124,58,237,.4); }
+  .rm-field input:focus, .rm-field select:focus, .rm-field textarea:focus {
+    outline:none; border-color: var(--accent); background: rgba(124,58,237,.06);
+    box-shadow: 0 0 0 3px rgba(124,58,237,.16);
+  }
+  .rm-row2 { display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 560px) { .rm-row2 { grid-template-columns: 1fr; } }
+
+  #rm-goal-input { font-size: .96rem; font-weight:600; padding:.85rem 1rem; }
+  .rm-input-wrap.rm-icon-right #rm-goal-input { padding-right: 2.6rem; }
+  #rm-goal-input:focus { box-shadow: 0 0 0 3px rgba(124,58,237,.18), 0 0 26px rgba(124,58,237,.14); }
+  .rm-input-icon.rm-sparkle { animation: rmGlowPulse 2.2s ease-in-out infinite; border-radius:50%; }
+
+  .rm-examples { display:flex; flex-wrap:wrap; gap:.5rem; margin-top: .7rem; }
+  .rm-example-chip {
+    display:inline-flex; align-items:center; gap:.35rem; font-size:.76rem; font-weight:600;
+    padding: .38rem .75rem .38rem .55rem; border-radius: 999px;
+    border: 1px solid rgba(124,58,237,.22); color: var(--text-secondary); cursor: pointer;
+    background: rgba(255,255,255,0.025); transition: all .2s ease;
+  }
+  .rm-example-chip .lucide { width:12px; height:12px; opacity:.7; }
+  .rm-example-chip:hover {
+    border-color: var(--accent); color: #fff; transform: translateY(-2px);
+    background: linear-gradient(135deg, rgba(124,58,237,.22), rgba(34,211,238,.1));
+    box-shadow: 0 6px 16px rgba(124,58,237,.25);
+  }
+
+  .rm-submit {
+    width:100%; margin-top: .8rem; padding: 1.05rem; font-size: 1rem; font-weight:700;
+    display:flex; align-items:center; justify-content:center; gap:.55rem; border-radius:13px; border:none;
+    background: linear-gradient(100deg, var(--accent), #6366f1 55%, var(--grad-cyan,#22d3ee));
+    color:#fff; cursor:pointer;
+    box-shadow: 0 14px 34px rgba(124,58,237,.35);
+    transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+  }
+  .rm-submit:hover { transform: translateY(-2px); box-shadow: 0 18px 42px rgba(124,58,237,.48); filter:brightness(1.06); }
+  .rm-submit:active { transform: translateY(0); }
+
+  /* ── Right sidebar: "My Roadmaps" ── */
+  .rm-includes-card {
+    background: rgba(15,10,28,.62); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(124,58,237,.24); border-radius: 20px; padding: 1.4rem;
+    box-shadow: 0 20px 60px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05);
+    animation: rmFadeUp .6s ease .2s both;
+    max-height: 640px; overflow-y: auto;
+  }
+  .rm-includes-title { display:flex; align-items:center; gap:.5rem; font-size:.95rem; font-weight:700; margin-bottom:1.1rem; color:#e9d5ff; }
+  .rm-includes-title .lucide { color: var(--accent-hover); }
+
+  .rm-mr-section { margin-bottom: 1.2rem; }
+  .rm-mr-section:last-child { margin-bottom: 0; }
+  .rm-mr-section-label {
+    font-size:.68rem; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color: var(--text-muted);
+    margin-bottom:.6rem; display:flex; align-items:center; gap:.4rem;
+  }
+  .rm-mr-section-label .dot { width:6px; height:6px; border-radius:50%; }
+  .rm-mr-section-label .dot.active { background: var(--green,#10b981); box-shadow:0 0 6px rgba(16,185,129,.6); }
+  .rm-mr-section-label .dot.completed { background: var(--gold,#f59e0b); }
+  .rm-mr-section-label .dot.archived { background: var(--text-muted); }
+
+  .rm-mr-item {
+    display:flex; align-items:center; justify-content:space-between; gap:.6rem;
+    padding:.65rem .7rem; border-radius:10px; border:1px solid rgba(255,255,255,0.04);
+    background: rgba(255,255,255,0.02); margin-bottom:.5rem; transition: all .2s ease;
+  }
+  .rm-mr-item:last-child { margin-bottom:0; }
+  .rm-mr-item:hover { border-color: rgba(124,58,237,.3); background: rgba(124,58,237,.06); }
+  .rm-mr-goal { font-size:.8rem; font-weight:600; color: var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rm-mr-date { font-size:.66rem; color: var(--text-muted); margin-top:.15rem; }
+  .rm-mr-btn {
+    flex-shrink:0; font-size:.68rem; font-weight:700; padding:.32rem .65rem; border-radius:7px;
+    border:1px solid rgba(124,58,237,.35); color:#c4b5fd; background: rgba(124,58,237,.1);
+    text-decoration:none; white-space:nowrap; transition: all .2s ease;
+  }
+  .rm-mr-btn:hover { background: var(--accent); color:#fff; }
+  .rm-mr-btn.is-active { border-color: rgba(16,185,129,.4); color: var(--green,#10b981); background: rgba(16,185,129,.1); }
+  .rm-mr-empty { font-size:.78rem; color: var(--text-secondary); line-height:1.55; text-align:center; padding: 1.2rem .5rem; }
+  .rm-mr-empty .lucide { width:26px; height:26px; color: var(--text-muted); margin-bottom:.5rem; opacity:.6; }
+
+  /* ── Floating quote card ── */
+  .rm-quote-card {
+    position:absolute; left:1.5rem; bottom:8%; z-index:1; width:230px; text-align:left;
+    background: rgba(10,7,20,.55); backdrop-filter: blur(10px); border:1px solid rgba(124,58,237,.25);
+    border-radius: 14px; padding: 1.1rem 1.2rem; animation: rmFadeUp .6s ease .3s both;
+    display:none;
+  }
+  @media (min-width: 1220px) { .rm-quote-card { display:block; } }
+  .rm-quote-mark { font-size:1.7rem; color:#a78bfa; line-height:1; margin-bottom:.4rem; font-family: Georgia, serif; }
+  .rm-quote-card p { font-size:.9rem; color: var(--text-primary); line-height:1.55; margin:0; font-weight:500; }
+  .rm-quote-attrib { font-size:.72rem; color: var(--text-muted); margin-top:.7rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rm-hero" id="rmHero">
+  <div id="rmStars"></div>
+
+  <div class="rm-onboard-wrap">
+    <div class="rm-onboard-header">
+      <span class="rm-badge-pill"><i data-lucide="sparkles" class="lucide" style="width:12px;height:12px;"></i> AI ROADMAP GENERATOR</span>
+      <h1><span>AI</span> <span class="accent">Roadmap</span></h1>
+      <p>{% if generation_failed %}Roadmap generation for "{{ goal }}" didn't go through — let's try again.{% else %}Tell the AI your goal. It builds the entire learning path — phases, weekly plans, daily missions, resources — from scratch.{% endif %}</p>
+    </div>
+
+   
+
+    <div class="rm-layout">
+      <div class="rm-form-card">
+        <form method="post" action="{% url 'roadmap_onboarding' %}">
+          {% csrf_token %}
+
+          <div class="rm-field">
+            <label>Your Goal</label>
+            <div class="rm-input-wrap rm-icon-right">
+              <input type="text" name="goal" placeholder="e.g. Become a Full Stack Developer" required
+                     value="{{ goal|default:'' }}" id="rm-goal-input">
+              <i data-lucide="sparkles" class="lucide rm-input-icon rm-sparkle"></i>
+            </div>
+            <div class="rm-examples">
+              <span class="rm-example-chip" onclick="document.getElementById('rm-goal-input').value=this.dataset.g" data-g="Learn Python"><i data-lucide="code" class="lucide"></i> Learn Python</span>
+              <span class="rm-example-chip" onclick="document.getElementById('rm-goal-input').value=this.dataset.g" data-g="Become Full Stack Developer"><i data-lucide="layers" class="lucide"></i> Become Full Stack Developer</span>
+              <span class="rm-example-chip" onclick="document.getElementById('rm-goal-input').value=this.dataset.g" data-g="Crack GATE CSE"><i data-lucide="graduation-cap" class="lucide"></i> Crack GATE CSE</span>
+              <span class="rm-example-chip" onclick="document.getElementById('rm-goal-input').value=this.dataset.g" data-g="Learn UI/UX"><i data-lucide="palette" class="lucide"></i> Learn UI/UX</span>
+              <span class="rm-example-chip" onclick="document.getElementById('rm-goal-input').value=this.dataset.g" data-g="Become Data Scientist"><i data-lucide="bar-chart-3" class="lucide"></i> Become Data Scientist</span>
+              <span class="rm-example-chip" onclick="document.getElementById('rm-goal-input').value=this.dataset.g" data-g="Learn German"><i data-lucide="languages" class="lucide"></i> Learn German</span>
+              <span class="rm-example-chip" onclick="document.getElementById('rm-goal-input').value=this.dataset.g" data-g="Crack IELTS"><i data-lucide="book-open" class="lucide"></i> Crack IELTS</span>
+              <span class="rm-example-chip" onclick="document.getElementById('rm-goal-input').value=this.dataset.g" data-g="Lose 10kg"><i data-lucide="flame" class="lucide"></i> Lose 10kg</span>
+              <span class="rm-example-chip" onclick="document.getElementById('rm-goal-input').value=this.dataset.g" data-g="Build a Startup"><i data-lucide="rocket" class="lucide"></i> Build a Startup</span>
+            </div>
+          </div>
+
+          <div class="rm-row2">
+            <div class="rm-field">
+              <label>Current Skill Level</label>
+              <div class="rm-input-wrap">
+                <i data-lucide="bar-chart-2" class="lucide rm-input-icon"></i>
+                <select name="current_skill_level">
+                  {% for value, label in skill_levels %}
+                  <option value="{{ value }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="rm-field">
+              <label>Daily Available Time (minutes)</label>
+              <div class="rm-input-wrap">
+                <i data-lucide="clock" class="lucide rm-input-icon"></i>
+                <input type="number" name="daily_minutes" min="10" max="600" value="60" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="rm-row2">
+            <div class="rm-field">
+              <label>Target Deadline (optional)</label>
+              <div class="rm-input-wrap">
+                <i data-lucide="calendar" class="lucide rm-input-icon"></i>
+                <input type="date" name="target_deadline">
+              </div>
+            </div>
+            <div class="rm-field">
+              <label>Learning Preference</label>
+              <div class="rm-input-wrap">
+                <i data-lucide="layout-grid" class="lucide rm-input-icon"></i>
+                <select name="learning_preference">
+                  {% for value, label in learning_preferences %}
+                  <option value="{{ value }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="rm-field">
+            <label>Existing Skills (comma-separated, optional)</label>
+            <div class="rm-input-wrap">
+              <i data-lucide="code-2" class="lucide rm-input-icon"></i>
+              <input type="text" name="existing_skills" placeholder="e.g. HTML, CSS, basic JavaScript">
+            </div>
+          </div>
+
+          <div class="rm-row2">
+            <div class="rm-field">
+              <label>Preferred Language</label>
+              <div class="rm-input-wrap">
+                <i data-lucide="languages" class="lucide rm-input-icon"></i>
+                <input type="text" name="preferred_language" value="English">
+              </div>
+            </div>
+            <div class="rm-field">
+              <label>Budget</label>
+              <div class="rm-input-wrap">
+                <i data-lucide="wallet" class="lucide rm-input-icon"></i>
+                <select name="budget">
+                  {% for value, label in budget_choices %}
+                  <option value="{{ value }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="rm-submit">
+            <i data-lucide="wand-2" class="lucide"></i> Generate My Roadmap
+          </button>
+        </form>
+      </div>
+
+      <div class="rm-includes-card">
+        <div class="rm-includes-title"><i data-lucide="folder-kanban" class="lucide" style="width:16px;height:16px;"></i> My Roadmaps</div>
+
+        {% if active_roadmaps or completed_roadmaps or archived_roadmaps %}
+
+          {% if active_roadmaps %}
+          <div class="rm-mr-section">
+            <div class="rm-mr-section-label"><span class="dot active"></span> Active</div>
+            {% for r in active_roadmaps %}
+            <div class="rm-mr-item">
+              <div style="min-width:0;">
+                <div class="rm-mr-goal">{{ r.goal }}</div>
+                <div class="rm-mr-date">{{ r.created_at|date:"d M Y" }}</div>
+              </div>
+              <a href="{% url 'roadmap_home' %}" class="rm-mr-btn is-active">Open</a>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {% if completed_roadmaps %}
+          <div class="rm-mr-section">
+            <div class="rm-mr-section-label"><span class="dot completed"></span> Completed</div>
+            {% for r in completed_roadmaps %}
+            <div class="rm-mr-item">
+              <div style="min-width:0;">
+                <div class="rm-mr-goal">{{ r.goal }}</div>
+                <div class="rm-mr-date">{{ r.created_at|date:"d M Y" }}</div>
+              </div>
+              <form method="post" action="{% url 'roadmap_switch' r.id %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="rm-mr-btn">View</button>
+              </form>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {% if archived_roadmaps %}
+          <div class="rm-mr-section">
+            <div class="rm-mr-section-label"><span class="dot archived"></span> Archived</div>
+            {% for r in archived_roadmaps %}
+            <div class="rm-mr-item">
+              <div style="min-width:0;">
+                <div class="rm-mr-goal">{{ r.goal }}</div>
+                <div class="rm-mr-date">{{ r.created_at|date:"d M Y" }}</div>
+              </div>
+              <form method="post" action="{% url 'roadmap_switch' r.id %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="rm-mr-btn">Resume</button>
+              </form>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+        {% else %}
+          <div class="rm-mr-empty">
+            <i data-lucide="rocket" class="lucide"></i>
+            <p>You haven't created any roadmaps yet — fill in your goal and generate your first one!</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  // Tiny twinkling starfield over the portal background — cheap, no images.
+  const field = document.getElementById('rmStars');
+  if (!field) return;
+  const count = window.innerWidth < 700 ? 25 : 55;
+  for (let i = 0; i < count; i++) {
+    const s = document.createElement('span');
+    s.className = 'rm-star';
+    const size = (Math.random() * 1.8 + 0.6).toFixed(1);
+    s.style.width = size + 'px';
+    s.style.height = size + 'px';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top = Math.random() * 55 + '%';
+    s.style.animationDuration = (Math.random() * 3 + 2).toFixed(1) + 's';
+    s.style.animationDelay = (Math.random() * 3).toFixed(1) + 's';
+    field.appendChild(s);
+  }
+})();
+</script>
+{% endblock %}

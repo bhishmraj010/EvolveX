@@ -1,0 +1,691 @@
+{% extends "base.html" %}
+{% block title %}Diet Tracker{% endblock %}
+
+{% block body_class %}theme-graphite{% endblock %}
+{% block content %}
+
+<!-- Date Navigation -->
+<div class="date-nav">
+  <a href="?date={{ prev_date }}" class="date-arrow">‹</a>
+  <div class="date-center">
+    <span class="date-label">{% if is_today %}Today{% else %}Selected Day{% endif %}</span>
+    <span class="date-value">{{ selected_date|date:"D, d M Y" }}</span>
+    <input type="date" class="date-picker-input"
+           value="{{ selected_date|date:'Y-m-d' }}"
+           onchange="window.location='?date='+this.value">
+  </div>
+  <a href="?date={{ next_date }}" class="date-arrow">›</a>
+</div>
+
+<!-- Macro Summary Cards -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1rem;margin-bottom:1.5rem;">
+
+  <!-- Calories -->
+  <div class="card" style="border-color:
+    {% if diet_log.day_status == 'win' %}var(--green)
+    {% elif diet_log.day_status == 'survive' %}var(--gold)
+    {% elif diet_log.day_status == 'lose' %}var(--red)
+    {% else %}var(--border){% endif %}44;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.6rem;">
+      <div>
+        <div style="font-size:1.9rem;font-weight:800;color:var(--text-primary);line-height:1;">
+          {{ diet_log.total_calories|floatformat:0 }}
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-secondary);">/ {{ profile.daily_calories }} kcal</div>
+      </div>
+      <span class="status-badge
+        {% if diet_log.day_status == 'win' %}badge-done
+        {% elif diet_log.day_status == 'lose' %}badge-skip
+        {% elif diet_log.day_status == 'survive' %}badge-survive
+        {% else %}badge-pending{% endif %}">
+        {{ diet_log.get_day_status_display }}
+      </span>
+    </div>
+    <div style="background:var(--border);border-radius:99px;height:8px;overflow:hidden;">
+      <div style="height:100%;border-radius:99px;width:{{ calorie_pct }}%;
+        background:{% if calorie_pct > 110 %}var(--red){% elif calorie_pct >= 90 %}var(--green){% else %}var(--accent){% endif %};
+        transition:width .5s ease;"></div>
+    </div>
+    <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.35rem;">{{ calorie_pct }}% of goal</div>
+  </div>
+
+  <!-- Protein -->
+  <div class="card">
+    <div style="font-size:1.5rem;font-weight:700;color:#4cff91;">{{ diet_log.total_protein|floatformat:0 }}g</div>
+    <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.5rem;">Protein / {{ profile.protein_g }}g</div>
+    <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden;">
+      <div style="height:100%;border-radius:99px;width:{{ protein_pct }}%;background:#4cff91;transition:width .5s;"></div>
+    </div>
+    <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:0.3rem;">{{ protein_pct }}%</div>
+  </div>
+
+  <!-- Carbs -->
+  <div class="card">
+    <div style="font-size:1.5rem;font-weight:700;color:#f5c842;">{{ diet_log.total_carbs|floatformat:0 }}g</div>
+    <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.5rem;">Carbs / {{ profile.carbs_g }}g</div>
+    <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden;">
+      <div style="height:100%;border-radius:99px;width:{{ carbs_pct }}%;background:#f5c842;transition:width .5s;"></div>
+    </div>
+    <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:0.3rem;">{{ carbs_pct }}%</div>
+  </div>
+
+  <!-- Fat -->
+  <div class="card">
+    <div style="font-size:1.5rem;font-weight:700;color:#ff4c6b;">{{ diet_log.total_fat|floatformat:0 }}g</div>
+    <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.5rem;">Fat / {{ profile.fat_g }}g</div>
+    <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden;">
+      <div style="height:100%;border-radius:99px;width:{{ fat_pct }}%;background:#ff4c6b;transition:width .5s;"></div>
+    </div>
+    <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:0.3rem;">{{ fat_pct }}%</div>
+  </div>
+
+</div>
+
+<!-- Alerts -->
+{% if diet_log.has_cheat_meal %}
+<div style="margin-bottom:0.75rem;background:#ff4c6b15;border:1px solid #ff4c6b44;border-radius:8px;padding:0.65rem 1rem;font-size:0.88rem;color:var(--red);">
+  🍕 Cheat meal logged today — <strong>-{{ diet_cheat_penalty }} pts</strong> penalty applied
+</div>
+{% endif %}
+
+{% if diet_log.points_earned > 0 %}
+<div style="margin-bottom:1rem;background:var(--accent-glow);border:1px solid var(--accent)44;border-radius:8px;padding:0.65rem 1rem;font-size:0.88rem;color:var(--accent);">
+  ⚡ Diet points today: <strong>+{{ diet_log.points_earned }}</strong>
+</div>
+{% endif %}
+
+<!-- Photo AI Meal Logger -->
+<div class="card" style="margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+    <div class="card-title" style="margin:0;">📸 Snap Your Meal</div>
+    <span style="font-size:0.76rem;color:var(--text-secondary);">AI reads the photo & fills macros for you</span>
+  </div>
+
+  <div id="photoUploadZone" style="border:2px dashed var(--border);border-radius:10px;padding:1.25rem;
+       text-align:center;cursor:pointer;transition:border-color .2s;" onclick="document.getElementById('mealPhotoInput').click()">
+    <input type="file" id="mealPhotoInput" accept="image/*" capture="environment" style="display:none;">
+    <div id="photoUploadPrompt">
+      <div style="font-size:2rem;margin-bottom:0.4rem;">📷</div>
+      <div style="font-size:0.9rem;color:var(--text-primary);">Tap to take a photo or upload one</div>
+      <div style="font-size:0.76rem;color:var(--text-secondary);margin-top:0.2rem;">JPG / PNG, up to 8MB</div>
+    </div>
+    <div id="photoPreviewWrap" style="display:none;">
+      <img id="photoPreviewImg" style="max-width:100%;max-height:220px;border-radius:8px;box-shadow:var(--shadow);">
+    </div>
+  </div>
+
+  <div id="photoActionsRow" style="display:none;margin-top:0.85rem;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+    <button type="button" class="btn btn-primary" id="analyzePhotoBtn" onclick="analyzeMealPhoto()">🤖 Analyze with AI</button>
+    <button type="button" class="btn btn-secondary" onclick="resetPhotoUpload()">Remove Photo</button>
+  </div>
+
+  <div id="photoAnalyzing" style="display:none;margin-top:1rem;padding:0.85rem 1rem;background:#7c6fff15;
+       border:1px solid var(--accent)44;border-radius:8px;font-size:0.88rem;color:var(--accent);">
+    🤖 AI is looking at your plate... estimating weight & macros...
+  </div>
+
+  <div id="photoError" style="display:none;margin-top:1rem;padding:0.65rem 1rem;background:#ff4c6b15;
+       border:1px solid var(--red)44;border-radius:8px;font-size:0.85rem;color:var(--red);"></div>
+
+  <!-- AI review panel -->
+  <div id="photoReviewPanel" style="display:none;margin-top:1.1rem;">
+    <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.6rem;" id="photoDescription"></div>
+
+    <div id="photoItemsList" style="display:flex;flex-direction:column;gap:0.6rem;"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:1rem;">
+      <div>
+        <label style="font-size:0.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:0.35rem;">Meal</label>
+        <select id="photoMealType" class="form-input">
+          {% for val, label in meal_types %}
+          <option value="{{ val }}">
+            {% if val == 'breakfast' %}🌅{% elif val == 'lunch' %}☀️{% elif val == 'dinner' %}🌙{% else %}🍎{% endif %}
+            {{ label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div id="photoTotalsBar" style="margin-top:1rem;padding:0.65rem 1rem;background:var(--bg-secondary);
+         border-radius:8px;font-size:0.85rem;color:var(--text-secondary);display:flex;gap:1.5rem;flex-wrap:wrap;"></div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:1rem;">
+      <button type="button" class="btn btn-primary" style="padding:0.6rem 1.5rem;" onclick="submitPhotoMeal()">
+        ✅ Log This Meal
+      </button>
+    </div>
+  </div>
+
+  <!-- Hidden confirm form -->
+  <form method="POST" action="{% url 'diet_confirm_photo' %}" id="confirmPhotoForm" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="date"       value="{{ selected_date|date:'Y-m-d' }}">
+    <input type="hidden" name="meal_type"  id="confirmMealType">
+    <input type="hidden" name="image_name" id="confirmImageName">
+    <input type="hidden" name="items_json" id="confirmItemsJson">
+  </form>
+</div>
+
+<!-- Add Food Form -->
+<div class="card" style="margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+    <div class="card-title" style="margin:0;">➕ Log Food</div>
+    <a href="{% url 'diet_edit_profile' %}" style="font-size:0.8rem;color:var(--text-secondary);text-decoration:none;">
+      ⚙️ Edit Goals
+    </a>
+  </div>
+
+  <form method="POST" action="{% url 'diet_add_meal' %}" id="addMealForm">
+    {% csrf_token %}
+    <input type="hidden" name="date"       value="{{ selected_date|date:'Y-m-d' }}">
+    <input type="hidden" name="food_id"    id="food_id">
+    <input type="hidden" name="calories"   id="f_calories">
+    <input type="hidden" name="protein_g"  id="f_protein">
+    <input type="hidden" name="carbs_g"    id="f_carbs">
+    <input type="hidden" name="fat_g"      id="f_fat">
+    <input type="hidden" name="cal_per_100"  id="f_cal_per_100">
+    <input type="hidden" name="pro_per_100"  id="f_pro_per_100">
+    <input type="hidden" name="carb_per_100" id="f_carb_per_100">
+    <input type="hidden" name="fat_per_100"  id="f_fat_per_100">
+
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0.75rem;align-items:end;">
+
+      <!-- Food search -->
+      <div>
+        <label style="font-size:0.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:0.35rem;">Food Name</label>
+        <div style="position:relative;">
+          <input type="text" id="foodSearch" name="food_name"
+                 placeholder="Search or type food name..."
+                 class="form-input" autocomplete="off">
+          <div id="searchDropdown"
+               style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;
+                      background:var(--bg-card);border:1px solid var(--border);
+                      border-radius:10px;z-index:100;max-height:240px;overflow-y:auto;
+                      box-shadow:var(--shadow);">
+          </div>
+        </div>
+        <!-- AI preview -->
+        <div id="aiPreview" style="display:none;margin-top:0.4rem;padding:0.5rem 0.75rem;
+             background:#7c6fff15;border:1px solid var(--accent)44;border-radius:6px;
+             font-size:0.8rem;color:var(--accent);"></div>
+      </div>
+
+      <!-- Quantity -->
+      <div>
+        <label style="font-size:0.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:0.35rem;">Qty</label>
+        <input type="number" name="quantity" id="qty" value="100"
+               min="1" step="0.5" class="form-input" oninput="updatePreview()">
+      </div>
+
+      <!-- Unit -->
+      <div>
+        <label style="font-size:0.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:0.35rem;">Unit</label>
+        <select name="unit" id="unit" class="form-input" onchange="updatePreview()">
+          <option value="g">g</option>
+          <option value="ml">ml</option>
+          <option value="pcs">pcs</option>
+          <option value="cup">cup</option>
+          <option value="tbsp">tbsp</option>
+        </select>
+      </div>
+
+      <!-- Meal type -->
+      <div>
+        <label style="font-size:0.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:0.35rem;">Meal</label>
+        <select name="meal_type" class="form-input">
+          {% for val, label in meal_types %}
+          <option value="{{ val }}">
+            {% if val == 'breakfast' %}🌅{% elif val == 'lunch' %}☀️{% elif val == 'dinner' %}🌙{% else %}🍎{% endif %}
+            {{ label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <!-- Calc preview bar -->
+    <div id="calcPreview" style="display:none;margin-top:0.75rem;padding:0.6rem 1rem;
+         background:var(--bg-secondary);border-radius:8px;font-size:0.85rem;
+         color:var(--text-secondary);display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center;">
+    </div>
+
+    <div style="display:flex;align-items:center;gap:1.25rem;margin-top:0.85rem;flex-wrap:wrap;">
+      <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.88rem;color:var(--red);cursor:pointer;">
+        <input type="checkbox" name="is_cheat" style="accent-color:var(--red);width:15px;height:15px;">
+        🍕 Mark as Cheat Meal <span style="color:var(--text-secondary);font-size:0.78rem;">(-5 pts)</span>
+      </label>
+      <button type="submit" class="btn btn-primary" style="margin-left:auto;padding:0.6rem 1.5rem;">
+        Log Food
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Meal Groups -->
+{% for mtype, group in grouped.items %}
+{% if group.items %}
+<div class="card" style="margin-bottom:1rem;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.85rem;">
+    <div class="card-title" style="margin:0;">{{ group.emoji }} {{ group.label }}</div>
+    <div style="font-size:0.82rem;color:var(--text-secondary);">
+      {{ group.items|length }} item{{ group.items|length|pluralize }}
+      &nbsp;·&nbsp;
+      <span style="color:var(--text-primary);font-weight:600;">{{ group.total_kcal|floatformat:0 }} kcal</span>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="task-table">
+      <thead>
+        <tr>
+          <th>Food</th>
+          <th>Qty</th>
+          <th>Kcal</th>
+          <th>Protein</th>
+          <th>Carbs</th>
+          <th>Fat</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for meal in group.items %}
+        <tr class="task-row {% if meal.is_cheat %}task-skip-row{% endif %}">
+          <td>
+            <span style="font-weight:500;">{{ meal.display_name }}</span>
+            {% if meal.is_cheat %}
+              <span class="status-badge badge-skip" style="margin-left:0.4rem;font-size:0.7rem;">cheat</span>
+            {% endif %}
+            {% if meal.food_item.ai_estimated %}
+              <span style="font-size:0.7rem;color:var(--accent);margin-left:0.3rem;" title="AI estimated">🤖</span>
+            {% endif %}
+            {% if meal.ai_analyzed and meal.image %}
+              <a href="{{ meal.image.url }}" target="_blank" style="font-size:0.7rem;color:var(--accent);margin-left:0.3rem;text-decoration:none;" title="Logged from photo">📸</a>
+            {% endif %}
+          </td>
+          <td style="color:var(--text-secondary);">{{ meal.quantity }}{{ meal.unit }}</td>
+          <td><span class="pts-badge pts-positive">{{ meal.calories|floatformat:0 }}</span></td>
+          <td style="color:#4cff91;">{{ meal.protein_g|floatformat:1 }}g</td>
+          <td style="color:#f5c842;">{{ meal.carbs_g|floatformat:1 }}g</td>
+          <td style="color:#ff4c6b;">{{ meal.fat_g|floatformat:1 }}g</td>
+          <td>
+            <div class="action-btns">
+              <a href="{% url 'diet_toggle_cheat' meal.id %}"
+                 class="btn btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.78rem;"
+                 title="{% if meal.is_cheat %}Remove cheat{% else %}Mark cheat{% endif %}">
+                {% if meal.is_cheat %}✅{% else %}🍕{% endif %}
+              </a>
+              <a href="{% url 'diet_delete_meal' meal.id %}"
+                 class="btn btn-danger" style="padding:0.3rem 0.6rem;font-size:0.78rem;"
+                 onclick="return confirm('Delete {{ meal.display_name }}?')">🗑</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<!-- Empty state -->
+{% if not grouped.breakfast.items and not grouped.lunch.items and not grouped.dinner.items and not grouped.snack.items %}
+<div style="text-align:center;padding:3.5rem 2rem;color:var(--text-secondary);">
+  <div style="font-size:3.5rem;margin-bottom:1rem;">🍽️</div>
+  <div style="font-size:1rem;margin-bottom:0.5rem;">No meals logged for this day.</div>
+  <div style="font-size:0.85rem;">Search and add your first meal above!</div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let selectedFood = null;  // food from DB
+let aiData       = null;  // food from AI
+
+const searchInput = document.getElementById('foodSearch');
+const dropdown    = document.getElementById('searchDropdown');
+const aiPreview   = document.getElementById('aiPreview');
+const calcPreview = document.getElementById('calcPreview');
+const foodIdEl    = document.getElementById('food_id');
+const qtyEl       = document.getElementById('qty');
+
+let searchTimer = null;
+
+// ── Search input ──────────────────────────────────────────────────────────
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  const q = searchInput.value.trim();
+  if (q.length < 2) { dropdown.style.display = 'none'; return; }
+  searchTimer = setTimeout(() => doSearch(q), 350);
+});
+
+async function doSearch(q) {
+  const res  = await fetch(`/diet/api/search/?q=${encodeURIComponent(q)}`);
+  const data = await res.json();
+  dropdown.innerHTML = '';
+
+  // DB results
+  data.results.forEach(f => {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:.65rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;';
+    div.innerHTML = `
+      <span style="color:var(--text-primary);font-size:.9rem;">${f.name}</span>
+      <span style="color:var(--text-secondary);font-size:.76rem;">${f.cal} kcal/100${f.unit}</span>`;
+    div.onmouseenter = () => div.style.background = 'var(--bg-secondary)';
+    div.onmouseleave = () => div.style.background = '';
+    div.onclick      = () => selectFood(f);
+    dropdown.appendChild(div);
+  });
+
+  // AI fallback option
+  const aiDiv = document.createElement('div');
+  aiDiv.style.cssText = 'padding:.65rem 1rem;cursor:pointer;color:var(--accent);font-size:.85rem;display:flex;align-items:center;gap:.5rem;';
+  aiDiv.innerHTML = `🤖 <span>Ask AI for <strong>"${q}"</strong></span>`;
+  aiDiv.onmouseenter = () => aiDiv.style.background = 'var(--bg-secondary)';
+  aiDiv.onmouseleave = () => aiDiv.style.background = '';
+  aiDiv.onclick      = () => askAI(q);
+  dropdown.appendChild(aiDiv);
+
+  dropdown.style.display = 'block';
+}
+
+// ── Select from DB ────────────────────────────────────────────────────────
+function selectFood(f) {
+  selectedFood = f;
+  aiData       = null;
+  searchInput.value      = f.name;
+  foodIdEl.value         = f.id;
+  document.getElementById('unit').value = f.unit;
+  dropdown.style.display = 'none';
+  aiPreview.style.display = 'none';
+  updatePreview();
+}
+
+// ── Ask AI ────────────────────────────────────────────────────────────────
+async function askAI(name) {
+  dropdown.style.display  = 'none';
+  aiPreview.style.display = 'block';
+  aiPreview.innerHTML     = '🤖 Estimating with AI...';
+
+  const qty  = qtyEl.value || 100;
+  const unit = document.getElementById('unit').value;
+  const res  = await fetch(`/diet/api/ai-lookup/?name=${encodeURIComponent(name)}&qty=${qty}&unit=${unit}`);
+  const data = await res.json();
+
+  if (data.success) {
+    aiData       = data.data;
+    selectedFood = null;
+    foodIdEl.value    = '';
+    searchInput.value = name;
+
+    document.getElementById('f_cal_per_100').value  = aiData.calories_per_100;
+    document.getElementById('f_pro_per_100').value  = aiData.protein_per_100;
+    document.getElementById('f_carb_per_100').value = aiData.carbs_per_100;
+    document.getElementById('f_fat_per_100').value  = aiData.fat_per_100;
+
+    aiPreview.innerHTML = `🤖 AI estimate · <strong>${aiData.calories} kcal</strong> · Protein: ${aiData.protein_g}g · Carbs: ${aiData.carbs_g}g · Fat: ${aiData.fat_g}g`;
+    updatePreview();
+  } else {
+    aiPreview.innerHTML = '⚠️ AI could not estimate. Try a different name.';
+  }
+}
+
+// ── Update calc preview ───────────────────────────────────────────────────
+function updatePreview() {
+  const qty = parseFloat(qtyEl.value) || 100;
+  let cal = 0, pro = 0, carb = 0, fat = 0;
+
+  if (selectedFood) {
+    const f = parseFloat(qty) / 100;
+    cal  = (selectedFood.cal  * f).toFixed(0);
+    pro  = (selectedFood.pro  * f).toFixed(1);
+    carb = (selectedFood.carb * f).toFixed(1);
+    fat  = (selectedFood.fat  * f).toFixed(1);
+  } else if (aiData) {
+    const f = parseFloat(qty) / 100;
+    cal  = (aiData.calories_per_100 * f).toFixed(0);
+    pro  = (aiData.protein_per_100  * f).toFixed(1);
+    carb = (aiData.carbs_per_100    * f).toFixed(1);
+    fat  = (aiData.fat_per_100      * f).toFixed(1);
+  } else {
+    calcPreview.style.display = 'none';
+    return;
+  }
+
+  document.getElementById('f_calories').value = cal;
+  document.getElementById('f_protein').value  = pro;
+  document.getElementById('f_carbs').value    = carb;
+  document.getElementById('f_fat').value      = fat;
+
+  calcPreview.style.display = 'flex';
+  calcPreview.innerHTML =
+    `<span>🔥 <strong style="color:var(--text-primary);">${cal} kcal</strong></span>` +
+    `<span>Protein: <strong style="color:#4cff91;">${pro}g</strong></span>` +
+    `<span>Carbs: <strong style="color:#f5c842;">${carb}g</strong></span>` +
+    `<span>Fat: <strong style="color:#ff4c6b;">${fat}g</strong></span>`;
+}
+
+// ── Close dropdown on outside click ──────────────────────────────────────
+document.addEventListener('click', e => {
+  if (!e.target.closest('#foodSearch') && !e.target.closest('#searchDropdown')) {
+    dropdown.style.display = 'none';
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// 📸 Photo-based AI meal logger
+// ══════════════════════════════════════════════════════════════════════════
+const photoInput      = document.getElementById('mealPhotoInput');
+const photoUploadZone = document.getElementById('photoUploadZone');
+const photoPrompt     = document.getElementById('photoUploadPrompt');
+const photoPreviewWrap= document.getElementById('photoPreviewWrap');
+const photoPreviewImg = document.getElementById('photoPreviewImg');
+const photoActionsRow = document.getElementById('photoActionsRow');
+const photoAnalyzing  = document.getElementById('photoAnalyzing');
+const photoError      = document.getElementById('photoError');
+const photoReviewPanel= document.getElementById('photoReviewPanel');
+const photoItemsList  = document.getElementById('photoItemsList');
+const photoTotalsBar  = document.getElementById('photoTotalsBar');
+const photoDescEl     = document.getElementById('photoDescription');
+
+let currentPhotoItems = [];   // working copy of AI-detected items (editable)
+let currentImageName  = '';   // storage path of the saved photo
+
+photoInput.addEventListener('change', () => {
+  const file = photoInput.files[0];
+  if (!file) return;
+
+  photoError.style.display = 'none';
+  photoReviewPanel.style.display = 'none';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    photoPreviewImg.src = e.target.result;
+    photoPrompt.style.display  = 'none';
+    photoPreviewWrap.style.display = 'block';
+    photoActionsRow.style.display  = 'flex';
+    photoUploadZone.style.borderColor = 'var(--accent)';
+  };
+  reader.readAsDataURL(file);
+});
+
+function resetPhotoUpload() {
+  photoInput.value = '';
+  currentPhotoItems = [];
+  currentImageName  = '';
+  photoPrompt.style.display  = 'block';
+  photoPreviewWrap.style.display = 'none';
+  photoActionsRow.style.display  = 'none';
+  photoAnalyzing.style.display   = 'none';
+  photoError.style.display       = 'none';
+  photoReviewPanel.style.display = 'none';
+  photoUploadZone.style.borderColor = 'var(--border)';
+}
+
+async function analyzeMealPhoto() {
+  const file = photoInput.files[0];
+  if (!file) return;
+
+  photoError.style.display   = 'none';
+  photoActionsRow.style.display = 'none';
+  photoAnalyzing.style.display  = 'block';
+
+  const formData = new FormData();
+  formData.append('image', file);
+
+  try {
+    const res = await fetch("{% url 'diet_analyze_photo' %}", {
+      method: 'POST',
+      headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+      body: formData,
+    });
+    const data = await res.json();
+
+    photoAnalyzing.style.display = 'none';
+
+    if (!data.success) {
+      photoError.textContent   = data.error || 'AI could not analyze this photo. Try again.';
+      photoError.style.display = 'block';
+      photoActionsRow.style.display = 'flex';
+      return;
+    }
+
+    currentImageName  = data.image_name;
+    currentPhotoItems = data.items.map(it => ({
+      name: it.name,
+      qty:  parseFloat(it.estimated_quantity) || 0,
+      unit: it.unit || 'g',
+      // per-unit macro rates, so editing qty rescales proportionally
+      calRate:  it.estimated_quantity ? (it.calories  / it.estimated_quantity) : 0,
+      proRate:  it.estimated_quantity ? (it.protein_g / it.estimated_quantity) : 0,
+      carbRate: it.estimated_quantity ? (it.carbs_g   / it.estimated_quantity) : 0,
+      fatRate:  it.estimated_quantity ? (it.fat_g     / it.estimated_quantity) : 0,
+    }));
+
+    photoDescEl.textContent = data.description || '';
+    photoReviewPanel.style.display = 'block';
+    renderPhotoItems();
+  } catch (err) {
+    photoAnalyzing.style.display  = 'none';
+    photoActionsRow.style.display = 'flex';
+    photoError.textContent   = 'Network error while analyzing photo. Please try again.';
+    photoError.style.display = 'block';
+  }
+}
+
+function renderPhotoItems() {
+  photoItemsList.innerHTML = '';
+
+  currentPhotoItems.forEach((item, idx) => {
+    const cal  = (item.qty * item.calRate).toFixed(0);
+    const pro  = (item.qty * item.proRate).toFixed(1);
+    const carb = (item.qty * item.carbRate).toFixed(1);
+    const fat  = (item.qty * item.fatRate).toFixed(1);
+
+    const row = document.createElement('div');
+    row.style.cssText = 'background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:0.7rem 0.9rem;';
+    row.innerHTML = `
+      <div style="display:grid;grid-template-columns:2fr 0.8fr 0.7fr auto;gap:0.6rem;align-items:end;">
+        <div>
+          <label style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:0.25rem;">Item</label>
+          <input type="text" class="form-input" value="${item.name.replace(/"/g,'&quot;')}" data-idx="${idx}" data-field="name" style="font-size:0.85rem;">
+        </div>
+        <div>
+          <label style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:0.25rem;">Qty</label>
+          <input type="number" class="form-input" value="${item.qty}" min="0" step="0.5" data-idx="${idx}" data-field="qty" style="font-size:0.85rem;">
+        </div>
+        <div>
+          <label style="font-size:0.72rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:0.25rem;">Unit</label>
+          <input type="text" class="form-input" value="${item.unit}" data-idx="${idx}" data-field="unit" style="font-size:0.85rem;">
+        </div>
+        <button type="button" class="btn btn-danger" style="padding:0.5rem 0.65rem;font-size:0.78rem;" onclick="removePhotoItem(${idx})">🗑</button>
+      </div>
+      <div style="margin-top:0.5rem;font-size:0.8rem;color:var(--text-secondary);display:flex;gap:1rem;flex-wrap:wrap;" id="itemMacros-${idx}">
+        <span>🔥 <strong style="color:var(--text-primary);">${cal} kcal</strong></span>
+        <span>Protein: <strong style="color:#4cff91;">${pro}g</strong></span>
+        <span>Carbs: <strong style="color:#f5c842;">${carb}g</strong></span>
+        <span>Fat: <strong style="color:#ff4c6b;">${fat}g</strong></span>
+      </div>`;
+    photoItemsList.appendChild(row);
+  });
+
+  photoItemsList.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', onPhotoItemEdit);
+  });
+
+  updatePhotoTotals();
+}
+
+function onPhotoItemEdit(e) {
+  const idx   = parseInt(e.target.dataset.idx);
+  const field = e.target.dataset.field;
+  if (field === 'qty') {
+    currentPhotoItems[idx].qty = parseFloat(e.target.value) || 0;
+  } else {
+    currentPhotoItems[idx][field] = e.target.value;
+  }
+
+  const item = currentPhotoItems[idx];
+  const cal  = (item.qty * item.calRate).toFixed(0);
+  const pro  = (item.qty * item.proRate).toFixed(1);
+  const carb = (item.qty * item.carbRate).toFixed(1);
+  const fat  = (item.qty * item.fatRate).toFixed(1);
+  const macroEl = document.getElementById(`itemMacros-${idx}`);
+  if (macroEl) {
+    macroEl.innerHTML = `
+      <span>🔥 <strong style="color:var(--text-primary);">${cal} kcal</strong></span>
+      <span>Protein: <strong style="color:#4cff91;">${pro}g</strong></span>
+      <span>Carbs: <strong style="color:#f5c842;">${carb}g</strong></span>
+      <span>Fat: <strong style="color:#ff4c6b;">${fat}g</strong></span>`;
+  }
+  updatePhotoTotals();
+}
+
+function removePhotoItem(idx) {
+  currentPhotoItems.splice(idx, 1);
+  renderPhotoItems();
+}
+
+function updatePhotoTotals() {
+  let totalCal = 0, totalPro = 0, totalCarb = 0, totalFat = 0;
+  currentPhotoItems.forEach(item => {
+    totalCal  += item.qty * item.calRate;
+    totalPro  += item.qty * item.proRate;
+    totalCarb += item.qty * item.carbRate;
+    totalFat  += item.qty * item.fatRate;
+  });
+
+  photoTotalsBar.innerHTML =
+    `<span>🔥 Total: <strong style="color:var(--text-primary);">${totalCal.toFixed(0)} kcal</strong></span>` +
+    `<span>Protein: <strong style="color:#4cff91;">${totalPro.toFixed(1)}g</strong></span>` +
+    `<span>Carbs: <strong style="color:#f5c842;">${totalCarb.toFixed(1)}g</strong></span>` +
+    `<span>Fat: <strong style="color:#ff4c6b;">${totalFat.toFixed(1)}g</strong></span>`;
+}
+
+function submitPhotoMeal() {
+  if (currentPhotoItems.length === 0) {
+    photoError.textContent   = 'Add at least one item before logging.';
+    photoError.style.display = 'block';
+    return;
+  }
+
+  const itemsForServer = currentPhotoItems.map(item => ({
+    name: item.name,
+    estimated_quantity: item.qty,
+    unit: item.unit,
+    calories:  +(item.qty * item.calRate).toFixed(1),
+    protein_g: +(item.qty * item.proRate).toFixed(1),
+    carbs_g:   +(item.qty * item.carbRate).toFixed(1),
+    fat_g:     +(item.qty * item.fatRate).toFixed(1),
+  }));
+
+  document.getElementById('confirmMealType').value  = document.getElementById('photoMealType').value;
+  document.getElementById('confirmImageName').value = currentImageName;
+  document.getElementById('confirmItemsJson').value = JSON.stringify(itemsForServer);
+  document.getElementById('confirmPhotoForm').submit();
+}
+</script>
+{% endblock %}

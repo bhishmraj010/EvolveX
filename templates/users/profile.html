@@ -1,0 +1,533 @@
+{% extends "base.html" %}
+{% block title %}{{ user.get_display_name }} — Profile{% endblock %}
+{% block body_class %}theme-mix{% endblock %}
+
+{% block extra_head %}
+<style>
+  .pr-crumb{color:var(--text-muted);font-size:0.82rem;margin-bottom:1rem;}
+  .pr-crumb a{color:var(--text-muted);text-decoration:none;}
+  .pr-crumb .cur{color:var(--text-secondary);}
+
+  .pr-locked{
+    position:relative;overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    padding:4.5rem 2rem;background:var(--bg-card);border:1px dashed var(--border);border-radius:16px;
+    backdrop-filter:blur(10px);
+  }
+  .pr-locked::before{
+    content:'';position:absolute;top:-40%;left:50%;transform:translateX(-50%);width:320px;height:320px;
+    background:radial-gradient(circle,var(--accent-glow) 0%,transparent 70%);opacity:.5;pointer-events:none;
+  }
+  .pr-locked .ic{
+    position:relative;width:68px;height:68px;border-radius:20px;margin-bottom:1.3rem;
+    background:linear-gradient(135deg,var(--accent),var(--pink));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 10px 30px var(--accent-glow);
+    animation:pr-float 3.2s ease-in-out infinite;
+  }
+  @keyframes pr-float{0%,100%{transform:translateY(0) rotate(-2deg);}50%{transform:translateY(-8px) rotate(2deg);}}
+  .pr-locked h3{position:relative;font-size:1.25rem;font-weight:800;color:var(--text-primary);margin-bottom:0.5rem;}
+  .pr-locked p{position:relative;color:var(--text-secondary);font-size:0.88rem;max-width:360px;line-height:1.55;}
+  .pr-locked .soon-badge{
+    position:relative;margin-top:1.4rem;display:inline-flex;align-items:center;gap:0.4rem;
+    padding:0.45rem 1rem;border-radius:999px;font-size:0.72rem;font-weight:700;letter-spacing:.02em;
+    background:rgba(124,58,237,.14);border:1px solid var(--accent)44;color:var(--accent-hover);
+    animation:pr-pulse-badge 2.4s ease-in-out infinite;
+  }
+  @keyframes pr-pulse-badge{0%,100%{box-shadow:0 0 0 0 var(--accent-glow);}50%{box-shadow:0 0 0 6px transparent;}}
+  .pr-locked .soon-badge .lucide{animation:pr-spin-slow 3s linear infinite;}
+  @keyframes pr-spin-slow{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+  .pr-layout{display:grid;grid-template-columns:2fr 1fr;gap:1.2rem;}
+  @media (max-width:980px){ .pr-layout{grid-template-columns:1fr;} }
+
+  .pr-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:1.4rem 1.5rem;
+    backdrop-filter:blur(10px);margin-bottom:1.2rem;animation:fade-in-up .5s ease both;}
+
+  .pr-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;}
+  .pr-avatar-wrap{display:flex;gap:1.1rem;}
+  .pr-avatar{width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--pink));
+    display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:800;color:#fff;position:relative;flex-shrink:0;}
+  .pr-avatar .cam{
+    position:absolute;bottom:-2px;right:-2px;width:26px;height:26px;border-radius:50%;
+    background:var(--bg-card-solid);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:all .2s ease;
+  }
+  .pr-avatar .cam:hover{background:var(--accent);border-color:var(--accent);transform:scale(1.08);box-shadow:0 0 0 4px var(--accent-glow);}
+  .pr-avatar .cam:hover .lucide{color:#fff;}
+  .pr-avatar-uploading{opacity:0.5;pointer-events:none;}
+  .pr-avatar-uploading .cam{animation:pr-spin-slow 0.9s linear infinite;}
+  .pr-name-row{display:flex;align-items:center;gap:0.5rem;font-size:1.3rem;font-weight:800;color:var(--text-primary);}
+  .pr-badge-row{display:flex;gap:0.5rem;margin-top:0.4rem;flex-wrap:wrap;}
+  .pr-badge{display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.7rem;border-radius:999px;font-size:0.72rem;font-weight:700;}
+  .pr-badge.warrior{background:rgba(124,58,237,.18);color:var(--accent-hover);}
+  .pr-badge.novice{background:rgba(245,158,11,.15);color:var(--gold);}
+  .pr-tagline{color:var(--text-secondary);font-size:0.85rem;margin-top:0.5rem;}
+  .pr-joined{color:var(--text-muted);font-size:0.78rem;margin-top:0.35rem;display:flex;align-items:center;gap:0.35rem;}
+
+  .pr-level-bar-row{display:flex;align-items:center;justify-content:space-between;margin-top:1.3rem;padding-top:1.1rem;border-top:1px solid var(--border);}
+  .pr-level-pill{display:flex;align-items:center;gap:0.5rem;background:rgba(124,58,237,.12);border:1px solid var(--accent)44;
+    border-radius:10px;padding:0.4rem 0.8rem;font-size:0.8rem;font-weight:700;color:var(--accent-hover);white-space:nowrap;}
+  .pr-level-track{flex:1;height:8px;border-radius:6px;background:rgba(255,255,255,.06);margin:0 1rem;overflow:hidden;}
+  .pr-level-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--accent),var(--cyan));transition:width 1s ease;}
+
+  .pr-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-top:1rem;}
+  @media (max-width:700px){ .pr-stats-grid{grid-template-columns:repeat(2,1fr);} }
+  .pr-stat{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:12px;padding:0.9rem;text-align:center;
+    transition:transform .2s ease,border-color .2s ease;}
+  .pr-stat:hover{transform:translateY(-3px);border-color:var(--accent);}
+  .pr-stat .v{font-size:1.3rem;font-weight:800;}
+  .pr-stat .l{font-size:0.68rem;color:var(--text-secondary);margin-top:0.2rem;}
+
+  /* ── Account Info + Change Password merged into one card ── */
+
+  /* ── Mini settings nav (sits atop the merged Account/Password card) ── */
+  .pr-mini-nav{display:flex;gap:0.5rem;margin-bottom:1.2rem;flex-wrap:wrap;}
+  .pr-mini-tab{
+    display:flex;align-items:center;gap:0.4rem;padding:0.5rem 0.9rem;border-radius:10px;
+    border:1px solid var(--border);background:rgba(255,255,255,.02);color:var(--text-secondary);
+    font-size:0.78rem;font-weight:700;cursor:pointer;transition:all .2s ease;
+  }
+  .pr-mini-tab:hover{border-color:var(--accent)66;color:var(--text-primary);}
+  .pr-mini-tab.active{background:linear-gradient(135deg,var(--accent),var(--accent-hover));border-color:transparent;color:#fff;box-shadow:0 6px 16px var(--accent-glow);}
+  .pr-mini-tab .lucide{width:13px;height:13px;}
+
+  /* Inline locked note used for Guilds/Rewards inside the mini nav (stays in place, no page switch) */
+  .pr-mini-locked{
+    display:flex;align-items:center;gap:0.7rem;padding:1rem 1.2rem;margin-bottom:1.2rem;
+    background:rgba(124,58,237,.06);border:1px dashed var(--accent)44;border-radius:12px;
+  }
+  .pr-mini-locked .ic{width:34px;height:34px;border-radius:9px;flex-shrink:0;
+    background:linear-gradient(135deg,var(--accent),var(--pink));display:flex;align-items:center;justify-content:center;}
+  .pr-mini-locked .ic .lucide{width:16px;height:16px;color:#fff;}
+  .pr-mini-locked .txt{font-size:0.8rem;color:var(--text-secondary);}
+  .pr-mini-locked .txt strong{color:var(--text-primary);}
+  .pr-mini-locked .badge{margin-left:auto;flex-shrink:0;display:inline-flex;align-items:center;gap:0.3rem;
+    padding:0.3rem 0.7rem;border-radius:999px;font-size:0.68rem;font-weight:700;
+    background:rgba(124,58,237,.14);border:1px solid var(--accent)44;color:var(--accent-hover);white-space:nowrap;}
+
+  /* One settings column visible at a time, switched by the mini nav */
+  .pr-settings-col{display:none;}
+  .pr-settings-col.active{display:block;animation:fade-in-up .35s ease both;}
+  .pr-settings-col + .pr-settings-col{border-left:none;padding-left:0;}
+  @media (max-width:900px){ .pr-settings-col + .pr-settings-col{border-top:none;padding-top:0;} }
+
+  /* ── Scrollable settings card (mirrors achievements pattern) ── */
+  .pr-settings-scroll{max-height:520px;overflow-y:auto;padding-right:6px;margin-right:-6px;}
+  .pr-settings-scroll::-webkit-scrollbar{width:5px;}
+  .pr-settings-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  .pr-settings-scroll::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+
+  .pr-settings-grid{display:block;}
+  .pr-settings-col + .pr-settings-col{border-left:1px solid var(--border);padding-left:1.6rem;}
+  @media (max-width:900px){ .pr-settings-col + .pr-settings-col{border-left:none;padding-left:0;border-top:1px solid var(--border);padding-top:1.2rem;} }
+  .pr-settings-subtitle{display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;font-weight:700;color:var(--text-primary);margin-bottom:1.1rem;}
+  .pr-settings-subtitle .badge-ic{width:28px;height:28px;border-radius:9px;flex-shrink:0;
+    background:linear-gradient(135deg,var(--accent),var(--accent-hover));
+    display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px var(--accent-glow);}
+  .pr-settings-subtitle .badge-ic .lucide{color:#fff;width:14px;height:14px;}
+
+  .pr-upload{display:flex;align-items:center;gap:0.9rem;margin-top:0.6rem;}
+  .pr-upload-ic{width:44px;height:44px;border-radius:50%;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-muted);}
+
+  .pr-checklist{display:flex;flex-direction:column;gap:0.35rem;margin-top:0.8rem;font-size:0.78rem;}
+  .pr-checklist .ok{color:var(--green);display:flex;align-items:center;gap:0.4rem;}
+
+  .pr-danger{border-color:var(--red)55;background:rgba(239,68,68,.05);}
+
+  .pr-side-title{font-size:0.85rem;font-weight:700;color:var(--text-primary);margin-bottom:0.9rem;display:flex;align-items:center;justify-content:space-between;}
+  .pr-side-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;}
+  .pr-side-stat{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:10px;padding:0.7rem;text-align:center;}
+  .pr-side-stat .v{font-size:1.05rem;font-weight:800;}
+  .pr-side-stat .l{font-size:0.62rem;color:var(--text-secondary);margin-top:0.15rem;}
+
+  /* ── Achievements — now scrollable so more can be added later ── */
+  .pr-achv-wrap{position:relative;}
+  .pr-achv-scroll{max-height:340px;overflow-y:auto;padding-right:4px;margin-right:-4px;}
+  .pr-achv-scroll::-webkit-scrollbar{width:5px;}
+  .pr-achv-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  .pr-achv-scroll::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+  .pr-achv-fade{position:absolute;left:0;right:10px;bottom:0;height:28px;pointer-events:none;
+    background:linear-gradient(to bottom,transparent,var(--bg-card-solid,var(--bg-card)) 92%);
+    opacity:0;transition:opacity .25s ease;border-radius:0 0 12px 12px;}
+  .pr-achv-wrap.can-scroll .pr-achv-fade{opacity:1;}
+  .pr-achv-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;}
+  .pr-achv{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:12px;padding:0.7rem;text-align:center;opacity:0.4;transition:transform .2s ease,border-color .2s ease,opacity .2s ease;}
+  .pr-achv:hover{transform:translateY(-2px);}
+  .pr-achv.unlocked{opacity:1;border-color:var(--accent)44;}
+  .pr-achv.unlocked:hover{border-color:var(--accent);box-shadow:0 8px 18px var(--accent-glow);}
+  .pr-achv .ic{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent-hover));
+    display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;}
+  .pr-achv.locked .ic{background:rgba(255,255,255,.05);}
+  .pr-achv .t{font-size:0.72rem;font-weight:700;color:var(--text-primary);}
+  .pr-achv .d{font-size:0.6rem;color:var(--text-secondary);margin-top:0.1rem;}
+
+  .pr-ring-wrap{text-align:center;}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="pr-crumb"><a href="{% url 'reports_home' %}">Home</a> &gt; <span class="cur">Profile</span></div>
+
+<div class="pr-layout">
+  <!-- ═══ MAIN COLUMN ═══ -->
+  <div>
+    <div class="pr-card">
+      <div class="pr-header">
+        <div class="pr-avatar-wrap">
+          <div class="pr-avatar" id="avatarPreviewWrap">
+            {% if user.avatar %}
+              <img src="{{ user.avatar.url }}" id="avatarPreviewImg" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
+            {% else %}
+              <span id="avatarInitials">{{ user.get_display_name|slice:":2"|upper }}</span>
+            {% endif %}
+            <div class="cam" id="avatarCamBtn" title="Change photo"><i data-lucide="camera" class="lucide" style="width:13px;height:13px;"></i></div>
+          </div>
+          <div>
+            <div class="pr-name-row">
+              {{ user.get_display_name }}
+              <i data-lucide="badge-check" class="lucide" style="color:var(--accent);width:18px;height:18px;"></i>
+            </div>
+            <div class="pr-badge-row">
+              <span class="pr-badge warrior"><i data-lucide="sword" class="lucide" style="width:11px;height:11px;"></i> {{ character_title|slice:"-7:" }}</span>
+              <span class="pr-badge novice">{{ cur_level.name }}</span>
+            </div>
+            {% if user.bio %}<div class="pr-tagline">{{ user.bio }}</div>{% endif %}
+            <div class="pr-joined"><i data-lucide="calendar" class="lucide" style="width:12px;height:12px;"></i> Joined {{ user.date_joined|date:"d M Y" }}</div>
+          </div>
+        </div>
+        <button type="button" class="btn" onclick="document.getElementById('accountInfoCard').scrollIntoView({behavior:'smooth'});" style="display:flex;align-items:center;gap:0.4rem;">
+          <i data-lucide="pencil" class="lucide"></i> Edit Profile
+        </button>
+      </div>
+
+      <div class="pr-level-bar-row">
+        <div class="pr-level-pill"><i data-lucide="shield" class="lucide" style="width:14px;height:14px;"></i> Level {{ user.level }}</div>
+        <div class="pr-level-track"><div class="pr-level-fill" style="width:{{ xp_pct }}%;"></div></div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);white-space:nowrap;">
+          {% if nxt_level %}XP: {{ user.total_xp }} / {{ nxt_level.pts_required }}{% else %}MAX LEVEL{% endif %}
+        </div>
+      </div>
+      {% if nxt_level %}
+      <div style="text-align:right;font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;">{{ xp_to_next }} XP to reach next level</div>
+      {% endif %}
+    </div>
+
+    <div class="pr-card">
+      <div class="pr-side-title"><i data-lucide="zap" class="lucide"></i> Warrior Stats</div>
+      <div class="pr-stats-grid">
+        <div class="pr-stat"><div class="v" style="color:var(--accent);">{{ user.level }}</div><div class="l">Level</div></div>
+        <div class="pr-stat"><div class="v" style="color:var(--blue);">{{ user.total_xp }}</div><div class="l">Total XP</div></div>
+        <div class="pr-stat"><div class="v" style="color:var(--green);">{{ win_days }}</div><div class="l">Win Days</div></div>
+        <div class="pr-stat"><div class="v" style="color:var(--gold);">{{ survive_days }}</div><div class="l">Survive Days</div></div>
+        <div class="pr-stat"><div class="v" style="color:var(--red);">{{ lose_days }}</div><div class="l">Lose Days</div></div>
+        <div class="pr-stat"><div class="v" style="color:var(--cyan);">{{ tasks_completed }}</div><div class="l">Tasks Done</div></div>
+        <div class="pr-stat"><div class="v" style="color:var(--accent);">{{ cur_streak }}</div><div class="l">Current Streak</div></div>
+        <div class="pr-stat"><div class="v" style="color:var(--pink);">{{ max_streak }}</div><div class="l">Best Streak</div></div>
+      </div>
+    </div>
+
+    <!-- ── Account Information + Change Password — now one merged card ── -->
+    <div class="pr-card" id="accountInfoCard">
+
+      <!-- ═══ Mini nav: Account Info / Change Password / My Journals / Guilds / Rewards ═══ -->
+      <div class="pr-mini-nav">
+        <button type="button" class="pr-mini-tab active" data-mini="account">
+          <i data-lucide="user" class="lucide"></i> Account Information
+        </button>
+        <button type="button" class="pr-mini-tab" data-mini="password">
+          <i data-lucide="lock" class="lucide"></i> Change Password
+        </button>
+        <button type="button" class="pr-mini-tab" data-mini="journals">
+          <i data-lucide="book-open" class="lucide"></i> My Journals
+        </button>
+        <button type="button" class="pr-mini-tab" data-mini="guilds">
+          <i data-lucide="users" class="lucide"></i> Guilds
+        </button>
+        <button type="button" class="pr-mini-tab" data-mini="rewards">
+          <i data-lucide="gem" class="lucide"></i> Rewards
+        </button>
+      </div>
+
+      <!-- Inline empty-state note for My Journals — shown in place, no scroll -->
+      <div class="pr-mini-locked" id="miniLocked-journals" style="display:none;">
+        <div class="ic"><i data-lucide="book-open" class="lucide"></i></div>
+        <div class="txt"><strong>No journal logged yet</strong> — your entries will show up here once you start writing.</div>
+        <span class="badge"><i data-lucide="feather" class="lucide" style="width:11px;height:11px;"></i> Start your story</span>
+      </div>
+
+      <!-- Inline locked notes for Guilds / Rewards — shown in place, no page switch -->
+      <div class="pr-mini-locked" id="miniLocked-guilds" style="display:none;">
+        <div class="ic"><i data-lucide="users" class="lucide"></i></div>
+        <div class="txt"><strong>Guilds</strong> haven't spawned yet — team up with other Evolvers soon.</div>
+        <span class="badge"><i data-lucide="sparkles" class="lucide" style="width:11px;height:11px;"></i> Unlock with future updates</span>
+      </div>
+      <div class="pr-mini-locked" id="miniLocked-rewards" style="display:none;">
+        <div class="ic"><i data-lucide="gem" class="lucide"></i></div>
+        <div class="txt"><strong>Rewards</strong> vault is still loading — perks and cosmetics coming soon.</div>
+        <span class="badge"><i data-lucide="sparkles" class="lucide" style="width:11px;height:11px;"></i> Unlock with future updates</span>
+      </div>
+
+      <div class="pr-settings-scroll">
+      <div class="pr-settings-grid">
+        <div class="pr-settings-col active" id="settingsCol-account">
+          <div class="pr-settings-subtitle"><span class="badge-ic"><i data-lucide="user" class="lucide"></i></span> Account Information</div>
+          <form method="post" enctype="multipart/form-data" id="accountInfoForm">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_info">
+            <div class="form-group">
+              <label>Username</label>
+              <input type="text" class="form-input" value="{{ user.username }}" readonly style="opacity:0.6;">
+            </div>
+            <div class="form-group">
+              <label>Display Name</label>
+              {{ form.name }}
+            </div>
+            <div class="form-group">
+              <label>Email Address</label>
+              {{ form.email }}
+            </div>
+            <div class="form-group">
+              <label>Phone Number</label>
+              {{ form.phone_number }}
+              {% if form.phone_number.errors %}<p class="form-error">{{ form.phone_number.errors.0 }}</p>{% endif %}
+            </div>
+            <div class="form-group">
+              <label>Avatar</label>
+              <div class="pr-upload">
+                <div class="pr-upload-ic"><i data-lucide="upload-cloud" class="lucide"></i></div>
+                {{ form.avatar }}
+                <span style="font-size:0.72rem;color:var(--text-muted);">PNG, JPG up to 2MB — or click the camera icon above</span>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;display:inline-flex;align-items:center;gap:0.4rem;">
+              <i data-lucide="save" class="lucide" style="width:14px;height:14px;"></i> Save Changes
+            </button>
+          </form>
+        </div>
+
+        <div class="pr-settings-col" id="settingsCol-password">
+          <div class="pr-settings-subtitle"><span class="badge-ic"><i data-lucide="lock" class="lucide"></i></span> Change Password</div>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="change_password">
+            <div class="form-group">
+              <label>Current Password</label>
+              <input type="password" name="old_password" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label>New Password</label>
+              <input type="password" name="new_password1" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label>Confirm New Password</label>
+              <input type="password" name="new_password2" class="form-input" required>
+            </div>
+            <div class="pr-checklist">
+              <span class="ok"><i data-lucide="check" class="lucide" style="width:12px;height:12px;"></i> At least 8 characters</span>
+              <span class="ok"><i data-lucide="check" class="lucide" style="width:12px;height:12px;"></i> Contains uppercase and lowercase letters</span>
+              <span class="ok"><i data-lucide="check" class="lucide" style="width:12px;height:12px;"></i> Contains a number</span>
+              <span class="ok"><i data-lucide="check" class="lucide" style="width:12px;height:12px;"></i> Contains a special character</span>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:0.9rem;display:inline-flex;align-items:center;gap:0.4rem;">
+              <i data-lucide="shield-check" class="lucide" style="width:14px;height:14px;"></i> Update Password
+            </button>
+          </form>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <div class="pr-card pr-danger">
+      <div class="pr-side-title" style="color:var(--red);"><i data-lucide="alert-triangle" class="lucide"></i> Danger Zone</div>
+      <p style="color:var(--text-secondary);font-size:0.82rem;">Deleting your account will permanently remove all your data including tasks, diet logs, and progress.</p>
+      <form method="post" action="{% url 'delete_account' %}" onsubmit="return confirm('This cannot be undone. Are you sure?');" style="margin-top:0.8rem;">
+        {% csrf_token %}
+        <label style="display:block;font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.4rem;">Confirm password to delete:</label>
+        <input type="password" name="confirm_password" class="form-input" style="margin-bottom:0.8rem;max-width:280px;" required>
+        <button type="submit" class="btn" style="background:var(--red);display:inline-flex;align-items:center;gap:0.4rem;">
+          <i data-lucide="trash-2" class="lucide"></i> Delete Account
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ SIDE COLUMN ═══ -->
+  <div>
+    <div class="pr-card">
+      <div style="display:flex;align-items:center;gap:0.9rem;">
+        <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--pink));
+          display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i data-lucide="shield" class="lucide" style="color:#fff;width:24px;height:24px;"></i>
+        </div>
+        <div>
+          <div style="font-size:0.72rem;color:var(--text-secondary);">Level</div>
+          <div style="font-size:1.4rem;font-weight:800;color:var(--text-primary);">{{ user.level }}</div>
+          <div style="font-size:0.72rem;color:var(--text-secondary);">{{ cur_level.name }} Warrior</div>
+        </div>
+      </div>
+      <div class="pr-side-stats" style="margin-top:1rem;">
+        <div class="pr-side-stat"><div class="v" style="color:var(--blue);">{{ user.total_xp }}</div><div class="l">Total XP</div></div>
+        <div class="pr-side-stat"><div class="v" style="color:var(--green);">{{ win_days }}</div><div class="l">Win Days</div></div>
+        <div class="pr-side-stat"><div class="v" style="color:var(--red);">{{ lose_days }}</div><div class="l">Lose Days</div></div>
+      </div>
+    </div>
+
+    <div class="pr-card">
+      <div class="pr-side-title">My Statistics</div>
+      <div class="pr-side-stats" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="pr-side-stat"><div class="v" style="color:var(--accent);">{{ user.level }}</div><div class="l">Level</div></div>
+        <div class="pr-side-stat"><div class="v" style="color:var(--blue);">{{ user.total_xp }}</div><div class="l">Total XP</div></div>
+        <div class="pr-side-stat"><div class="v" style="color:var(--green);">{{ win_days }}</div><div class="l">Win Days</div></div>
+        <div class="pr-side-stat" style="margin-top:0.6rem;"><div class="v" style="color:var(--gold);">{{ survive_days }}</div><div class="l">Survive Days</div></div>
+        <div class="pr-side-stat" style="margin-top:0.6rem;"><div class="v" style="color:var(--red);">{{ lose_days }}</div><div class="l">Lose Days</div></div>
+        <div class="pr-side-stat" style="margin-top:0.6rem;"><div class="v" style="color:var(--accent);">{{ cur_streak }}</div><div class="l">Streak</div></div>
+      </div>
+    </div>
+
+    <div class="pr-card">
+      <div class="pr-side-title">
+        Achievements
+        <span style="font-size:0.72rem;color:var(--text-secondary);font-weight:400;">{{ badges_unlocked }}/{{ badges_total }} Unlocked</span>
+      </div>
+      <div class="pr-achv-wrap" id="achvWrap">
+        <div class="pr-achv-scroll" id="achvScroll">
+          <div class="pr-achv-grid">
+            {% for b in badges %}
+            <div class="pr-achv {% if b.unlocked %}unlocked{% else %}locked{% endif %}">
+              <div class="ic"><i data-lucide="{{ b.icon }}" class="lucide" style="color:{% if b.unlocked %}#fff{% else %}var(--text-muted){% endif %};width:16px;height:16px;"></i></div>
+              <div class="t">{{ b.name }}</div>
+              <div class="d">{{ b.desc }}</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="pr-achv-fade"></div>
+      </div>
+    </div>
+
+    <div class="pr-card pr-ring-wrap">
+      <div class="pr-side-title">Weekly Goal Progress</div>
+      <div style="position:relative;width:100px;height:100px;margin:0 auto;">
+        <svg width="100" height="100" viewBox="0 0 100 100" style="transform:rotate(-90deg);">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="8"></circle>
+          <circle cx="50" cy="50" r="42" fill="none" stroke="url(#wgGrad)" stroke-width="8" stroke-linecap="round"
+            stroke-dasharray="263.9" stroke-dashoffset="263.9" id="weeklyGoalRing"></circle>
+          <defs>
+            <linearGradient id="wgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--accent)"></stop>
+              <stop offset="100%" stop-color="var(--pink)"></stop>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--text-primary);">{{ weekly_goal_pct }}%</div>
+        </div>
+      </div>
+      <p style="color:var(--text-secondary);font-size:0.82rem;margin-top:0.8rem;">Keep going, {{ user.get_display_name }}!</p>
+      <a href="{% url 'reports_home' %}" class="btn" style="text-decoration:none;display:inline-block;margin-top:0.6rem;">View Progress</a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const ring = document.getElementById('weeklyGoalRing');
+  if (ring) {
+    const circumference = 2 * Math.PI * 42;
+    const pct = {{ weekly_goal_pct|default:0 }};
+    const offset = circumference * (1 - pct / 100);
+    ring.style.transition = 'stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)';
+    requestAnimationFrame(() => { ring.style.strokeDashoffset = offset; });
+  }
+
+  // ── Achievements: show bottom fade only while there's more to scroll ──
+  const achvWrap = document.getElementById('achvWrap');
+  const achvScroll = document.getElementById('achvScroll');
+  if (achvWrap && achvScroll) {
+    const syncFade = () => {
+      const hasMore = achvScroll.scrollHeight - achvScroll.scrollTop - achvScroll.clientHeight > 4;
+      achvWrap.classList.toggle('can-scroll', hasMore);
+    };
+    syncFade();
+    achvScroll.addEventListener('scroll', syncFade);
+    window.addEventListener('resize', syncFade);
+  }
+
+  // ── Mini nav: Account Info / Change Password / My Journals / Guilds / Rewards ──
+  const miniTabs = document.querySelectorAll('.pr-mini-tab');
+  const settingsCols = document.querySelectorAll('.pr-settings-col');
+  const settingsScroll = document.querySelector('.pr-settings-scroll');
+  const miniLockedGuilds = document.getElementById('miniLocked-guilds');
+  const miniLockedRewards = document.getElementById('miniLocked-rewards');
+  const miniLockedJournals = document.getElementById('miniLocked-journals');
+
+  miniTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const key = tab.dataset.mini;
+
+      miniTabs.forEach((t) => t.classList.toggle('active', t.dataset.mini === key));
+
+      if (key === 'account' || key === 'password') {
+        // Show the matching column, hide locked/empty notes and the settings body stays visible.
+        if (miniLockedJournals) miniLockedJournals.style.display = 'none';
+        if (miniLockedGuilds) miniLockedGuilds.style.display = 'none';
+        if (miniLockedRewards) miniLockedRewards.style.display = 'none';
+        if (settingsScroll) settingsScroll.style.display = '';
+        settingsCols.forEach((c) => c.classList.toggle('active', c.id === 'settingsCol-' + key));
+      } else if (key === 'guilds' || key === 'rewards') {
+        // Inline locked note, stay right here — hide the settings form body, don't leave the card/page.
+        if (miniLockedJournals) miniLockedJournals.style.display = 'none';
+        if (settingsScroll) settingsScroll.style.display = 'none';
+        if (miniLockedGuilds) miniLockedGuilds.style.display = key === 'guilds' ? 'flex' : 'none';
+        if (miniLockedRewards) miniLockedRewards.style.display = key === 'rewards' ? 'flex' : 'none';
+      } else if (key === 'journals') {
+        // No journal entries exist here — show an inline empty-state note, stay in place, no scroll.
+        if (miniLockedGuilds) miniLockedGuilds.style.display = 'none';
+        if (miniLockedRewards) miniLockedRewards.style.display = 'none';
+        if (settingsScroll) settingsScroll.style.display = 'none';
+        if (miniLockedJournals) miniLockedJournals.style.display = 'flex';
+      }
+    });
+  });
+
+  // ── Camera icon -> triggers the real avatar file input, auto-submits on pick ──
+  const camBtn = document.getElementById('avatarCamBtn');
+  const fileInput = document.querySelector('#accountInfoForm input[type="file"]');
+  const avatarForm = document.getElementById('accountInfoForm');
+  const previewWrap = document.getElementById('avatarPreviewWrap');
+
+  if (camBtn && fileInput) {
+    camBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      // Instant local preview while the upload happens
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        let img = document.getElementById('avatarPreviewImg');
+        if (!img) {
+          img = document.createElement('img');
+          img.id = 'avatarPreviewImg';
+          img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+          const initials = document.getElementById('avatarInitials');
+          if (initials) initials.remove();
+          previewWrap.insertBefore(img, previewWrap.firstChild);
+        }
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+
+      previewWrap.classList.add('pr-avatar-uploading');
+      avatarForm.submit();
+    });
+  }
+})();
+</script>
+{% endblock %}

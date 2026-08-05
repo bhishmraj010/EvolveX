@@ -1,0 +1,563 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}EvolveX – AI-Powered Life OS | Journal, Track Habits & Evolve{% endblock %}
+
+{% block extra_head %}
+
+<!-- ===== SEO: meta description / keywords / robots ===== -->
+<meta name="description" content="EvolveX is an AI-powered life operating system. Write one honest journal entry a day and let AI turn it into personalized insights, habit tracking, and a clear roadmap to become your best self.">
+<meta name="keywords" content="EvolveX, AI life OS, AI journal, habit tracker, self improvement app, AI life coach, productivity app, personal growth AI">
+<meta name="robots" content="index, follow">
+<meta name="author" content="EvolveX">
+<meta name="theme-color" content="#08090d">
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+
+<!-- ===== Open Graph (Facebook, LinkedIn, WhatsApp previews) ===== -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="EvolveX">
+<meta property="og:title" content="EvolveX – AI-Powered Life OS">
+<meta property="og:description" content="Life doesn't wait. Neither should you. Write one honest journal entry a day and let AI guide you into your best version.">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:image" content="{% static 'images/og-evolvex.png' %}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="en_US">
+
+<!-- ===== Twitter Card ===== -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="EvolveX – AI-Powered Life OS">
+<meta name="twitter:description" content="Life doesn't wait. Neither should you. Write one honest journal entry a day and let AI guide you into your best version.">
+<meta name="twitter:image" content="{% static 'images/og-evolvex.png' %}">
+
+<!-- ===== Structured data (JSON-LD) — helps Google show a rich result ===== -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "EvolveX",
+  "applicationCategory": "LifestyleApplication",
+  "operatingSystem": "Web",
+  "description": "AI-powered life operating system that turns a daily journal entry into personalized insights, habit tracking, and an action roadmap.",
+  "url": "{{ request.build_absolute_uri }}",
+  "offers": {
+    "@type": "Offer",
+    "category": "Freemium"
+  }
+}
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet" />
+<style>
+  /* ===== Background video ===== */
+  .evx4-bg-video-wrap {
+    position: fixed; inset: 0; z-index: -1; overflow: hidden; background: #08090d;
+  }
+  .evx4-bg-video {
+    position: absolute; top: 50%; left: 50%; min-width: 100%; min-height: 100%;
+    width: auto; height: auto; transform: translate(-50%, -50%);
+    object-fit: cover; opacity: 1; filter: brightness(1.18) saturate(1.15) contrast(1.04);
+  }
+  .evx4-bg-video-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(8,9,13,0.1) 0%, rgba(8,9,13,0.32) 45%, #08090d 100%);
+  }
+
+  html, body { overflow-x: hidden; }
+
+  /* Guarantee the real app navbar always renders above our fixed background
+     video, and stays readable even if its own background is transparent. */
+  .navbar {
+    position: relative;
+    z-index: 1000;
+    background: rgba(8,9,13,0.75);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .evx4, .evx4 *, .evx4 *::before, .evx4 *::after { box-sizing: border-box; }
+
+  .evx4 {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: transparent;
+    color: #e8e9f0;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    width: 100%;
+    position: relative;
+  }
+  .evx4 a { color: inherit; text-decoration: none; }
+
+  /* Screen-reader-only utility — used to give sections a proper heading
+     outline for SEO/accessibility without changing the visual design. */
+  .evx4-sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+
+  /* Subtle full-bleed dot-grid texture behind everything */
+  .evx4::before {
+    content: '';
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px);
+    background-size: 26px 26px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 20%, black 0%, transparent 75%);
+            mask-image: radial-gradient(ellipse 70% 55% at 50% 20%, black 0%, transparent 75%);
+  }
+
+  .evx4 .container { max-width: 1800px; margin: 0 auto; padding: 0 56px; position: relative; z-index: 1; }
+  .evx4-section { width: 100%; padding: 0; }
+
+  @keyframes evx4FadeUp { from { opacity: 0; transform: translateY(22px);} to { opacity: 1; transform: translateY(0);} }
+  .evx4-reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s ease, transform .7s ease; }
+  .evx4-reveal.in { opacity: 1; transform: translateY(0); }
+  @media (prefers-reduced-motion: reduce) { .evx4 *, .evx4 *::before, .evx4 *::after { animation: none !important; transition: none !important; } }
+
+  /* ===== Hero ===== */
+  .evx4-hero { padding: 88px 0 0; text-align: center; position: relative; overflow: visible; }
+  .evx4-hero-glow {
+    position: absolute; top: -260px; left: 50%; transform: translateX(-50%);
+    width: 1100px; height: 1100px; z-index: 0; pointer-events: none;
+    background: radial-gradient(circle, rgba(124,92,252,0.16) 0%, rgba(90,50,255,0.06) 40%, transparent 72%);
+  }
+
+  .evx4-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(124,92,252,0.12); border: 1px solid rgba(124,92,252,0.28);
+    padding: 7px 18px; border-radius: 100px; font-size: .72rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; color: #b6a3ff; margin-bottom: 30px;
+  }
+  .evx4-badge svg { flex-shrink: 0; color: #a78bfa; }
+
+  .evx4-hero h1 {
+    font-size: clamp(2.2rem, 5.4vw, 4.2rem); font-weight: 800; line-height: 1.14; letter-spacing: -.02em;
+    background: linear-gradient(135deg, #ffffff 25%, #b6a3ff 75%, #7c5cfc 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin-bottom: 16px;
+  }
+  .evx4-hero .subhead {
+    font-size: clamp(1rem, 1.6vw, 1.25rem); font-weight: 500; color: #9095a6;
+    letter-spacing: .05em; text-transform: uppercase; margin-bottom: 56px;
+  }
+  .evx4-hero .subhead b { color: #c9c2ff; font-weight: 600; }
+
+  /* ===== Journal (now the hero centerpiece) ===== */
+  .evx4-journal-row {
+    width: 100%; margin: 0 auto 96px; text-align: left;
+  }
+
+  /* Left icon dock — fixed to the screen's left edge, real navigation to your app pages */
+  .evx4-dock {
+    position: fixed; left: 20px; top: 50%; transform: translateY(-50%);
+    z-index: 500; max-height: 82vh; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 10px;
+    background: rgba(8,9,13,0.72); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 22px; padding: 14px 10px; backdrop-filter: blur(14px);
+    box-shadow: 0 20px 50px -20px rgba(0,0,0,0.5);
+    scrollbar-width: none;
+  }
+  .evx4-dock::-webkit-scrollbar { display: none; }
+  .evx4-dock a {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 10px 6px; border-radius: 14px; color: #9095a6; width: 76px;
+    transition: background .2s ease, color .2s ease, transform .2s ease;
+  }
+  .evx4-dock a:hover { background: rgba(124,92,252,0.16); color: #fff; transform: translateY(-2px); }
+  .evx4-dock a.active { background: rgba(124,92,252,0.22); color: #fff; }
+  .evx4-dock a svg { flex-shrink: 0; }
+  .evx4-dock a span { font-size: .58rem; font-weight: 600; letter-spacing: .01em; text-align: center; line-height: 1.2; }
+  .evx4-dock a.upgrade { color: #ffb84d; }
+  .evx4-dock a.upgrade:hover { background: rgba(255,184,77,0.14); color: #ffb84d; }
+
+  .evx4-journal {
+    text-align: left;
+    background: linear-gradient(180deg, rgba(8,9,13,0.82), rgba(8,9,13,0.72));
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 28px; padding: 38px 40px 40px;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 30px 80px -30px rgba(90,50,255,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+    position: relative;
+  }
+  .evx4-journal .label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: .7rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: #a78bfa; margin-bottom: 6px;
+  }
+  .evx4-journal h2 { font-size: 1.4rem; font-weight: 700; color: #f5f5fa; margin-bottom: 4px; letter-spacing: -.01em; }
+  .evx4-journal .sub { font-size: .88rem; color: #9095a6; margin-bottom: 20px; }
+
+  .evx4-textarea {
+    width: 100%; min-height: 130px; background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.09); border-radius: 16px; padding: 18px 20px;
+    font-family: 'Inter', sans-serif; font-size: .96rem; color: #e8e9f0;
+    resize: vertical; transition: border-color .25s, box-shadow .25s; outline: none;
+  }
+  .evx4-textarea::placeholder { color: #565c6e; }
+  .evx4-textarea:focus { border-color: #7c5cfc; box-shadow: 0 0 0 4px rgba(124,92,252,0.12); }
+
+  .evx4-journal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+  .evx4-journal-hint { font-size: .78rem; color: #565c6e; }
+
+  .evx4-btn-primary {
+    display: inline-flex; align-items: center; gap: 9px; position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #8b6cff, #5b3fd9); border: none;
+    padding: 13px 30px; border-radius: 60px; font-family: 'Inter', sans-serif;
+    font-weight: 600; font-size: .9rem; color: #fff; cursor: pointer;
+    transition: transform .2s, box-shadow .25s; box-shadow: 0 10px 28px -6px rgba(90,50,255,0.5);
+  }
+  .evx4-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 36px -6px rgba(90,50,255,0.6); }
+  .evx4-btn-primary:active { transform: translateY(0); }
+
+  /* ===== Pillars (moved below journal) ===== */
+  .evx4-pillars {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px;
+    width: 100%; margin: 0 auto 110px; text-align: left;
+  }
+  .evx4-pillar {
+    background: rgba(8,9,13,0.65); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px; padding: 30px 26px 32px; backdrop-filter: blur(8px);
+    transition: border-color .3s ease, background .3s ease, transform .3s ease, box-shadow .3s ease;
+  }
+  .evx4-pillar:hover {
+    border-color: rgba(124,92,252,0.35); background: rgba(8,9,13,0.78);
+    transform: translateY(-5px); box-shadow: 0 20px 44px -18px rgba(90,50,255,0.4);
+  }
+  .evx4-pillar .icon {
+    width: 40px; height: 40px; border-radius: 12px; margin-bottom: 16px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(124,92,252,0.14); border: 1px solid rgba(124,92,252,0.2); color: #b6a3ff;
+  }
+  .evx4-pillar h3 { font-size: 1.12rem; font-weight: 700; color: #f5f5fa; margin-bottom: 8px; letter-spacing: -.01em; }
+  .evx4-pillar p { font-size: .92rem; color: #9095a6; line-height: 1.65; }
+  .evx4-pillar .highlight { color: #b6a3ff; font-weight: 600; }
+
+  /* ===== Feature row ===== */
+  .evx4-features-wrap { padding: 0 0 100px; position: relative; }
+  .evx4-features-label {
+    text-align: center; font-size: .74rem; font-weight: 700; letter-spacing: .18em;
+    text-transform: uppercase; color: #7c5cfc; margin-bottom: 48px;
+  }
+  .evx4-features {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 36px;
+    width: 100%; margin: 0 auto; text-align: center;
+  }
+  .evx4-feature {
+    padding: 32px 26px 34px; border-radius: 24px;
+    background:
+      radial-gradient(circle at 12% 100%, rgba(124,92,252,0.18), transparent 55%),
+      linear-gradient(180deg, rgba(8,9,13,0.82), rgba(8,9,13,0.72));
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 20px 50px -24px rgba(90,50,255,0.3);
+    transition: border-color .3s ease, transform .3s ease, box-shadow .3s ease;
+  }
+  .evx4-feature:hover {
+    border-color: rgba(124,92,252,0.35); transform: translateY(-5px);
+    box-shadow: 0 26px 60px -20px rgba(90,50,255,0.4);
+  }
+  .evx4-feature .num {
+    display: inline-block; font-size: 2.4rem; font-weight: 800;
+    background: linear-gradient(135deg, rgba(139,108,255,0.95), rgba(91,63,217,0.75));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    letter-spacing: -.03em; margin-bottom: 8px;
+    filter: drop-shadow(0 2px 10px rgba(0,0,0,0.55));
+  }
+  .evx4-feature h4 { font-size: 1.05rem; font-weight: 700; color: #f5f5fa; margin-bottom: 6px; }
+  .evx4-feature p { font-size: .9rem; color: #9095a6; max-width: 230px; margin: 0 auto; }
+
+  /* ===== Founder's Launch Offer countdown ===== */
+  .evx4-offer-wrap { padding: 0 0 100px; }
+  .evx4-offer {
+    width: 100%; margin: 0 auto; border-radius: 28px; padding: 44px;
+    background:
+      radial-gradient(circle at 12% 100%, rgba(124,92,252,0.22), transparent 55%),
+      linear-gradient(180deg, rgba(8,9,13,0.82), rgba(8,9,13,0.72));
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 30px 70px -30px rgba(90,50,255,0.3);
+  }
+  .evx4-offer-head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .evx4-offer-head svg { color: #ffb84d; flex-shrink: 0; }
+  .evx4-offer-head h2 { font-size: 1.55rem; font-weight: 700; color: #f5f5fa; letter-spacing: -.01em; }
+  .evx4-offer-sub { color: #9095a6; font-size: .95rem; margin-bottom: 30px; }
+
+  .evx4-offer-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .evx4-offer-plan {
+    background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 20px 22px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .evx4-offer-plan-label { color: #9095a6; font-size: .84rem; font-weight: 500; }
+  .evx4-offer-plan-perk { color: #b6a3ff; font-weight: 700; font-size: 1.05rem; }
+
+  .evx4-offer-ends { font-size: .84rem; color: #9095a6; margin-bottom: 14px; }
+  .evx4-offer-countdown { display: flex; gap: 14px; margin-bottom: 34px; flex-wrap: wrap; }
+  .evx4-offer-cd-box {
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 16px 22px; min-width: 78px; text-align: center;
+  }
+  .evx4-offer-cd-num { font-size: 1.85rem; font-weight: 800; color: #fff; line-height: 1; letter-spacing: -.02em; }
+  .evx4-offer-cd-lbl { font-size: .68rem; letter-spacing: .08em; color: #9095a6; margin-top: 6px; text-transform: uppercase; display: block; }
+
+  .evx4-offer-btn {
+    display: inline-flex; align-items: center; gap: 10px; border: none; cursor: pointer;
+    padding: 15px 32px; border-radius: 60px; font-weight: 700; font-size: .95rem;
+    background: linear-gradient(135deg, #8b6cff, #5b3fd9); color: #fff;
+    box-shadow: 0 10px 30px -6px rgba(90,50,255,0.5); transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .evx4-offer-btn:hover { transform: translateY(-2px); box-shadow: 0 16px 40px -6px rgba(90,50,255,0.6); }
+
+  /* ===== Footer ===== */
+  .evx4-footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 36px 0 32px; }
+  .evx4-footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 18px; }
+  .evx4-footer .brand { font-weight: 800; font-size: 1.15rem; letter-spacing: -.02em; color: #f5f5fa; }
+  .evx4-footer .brand span { color: #a78bfa; }
+  .evx4-footer-links { display: flex; flex-wrap: wrap; gap: 20px 30px; font-size: .85rem; color: #9095a6; }
+  .evx4-footer-links a { transition: color .2s; }
+  .evx4-footer-links a:hover { color: #e8e9f0; }
+  .evx4-footer .copy { font-size: .78rem; color: #565c6e; width: 100%; text-align: center; margin-top: 14px; }
+
+  /* ===== Responsive ===== */
+  @media (min-width: 901px) {
+    .evx4 .container { padding-left: 156px; }
+  }
+
+  @media (max-width: 900px) {
+    .evx4-hero { padding-top: 60px; }
+    .evx4-journal-row { margin-bottom: 72px; }
+    .evx4-dock { display: none; }
+    .evx4-journal { padding: 28px 24px 30px; order: 1; }
+    .evx4-pillars { margin-bottom: 80px; }
+    .evx4-features-wrap, .evx4-offer-wrap { padding-bottom: 72px; }
+  }
+  @media (max-width: 640px) {
+    .evx4 .container { padding: 0 20px; }
+    .evx4-hero h1 { font-size: 2.1rem; }
+    .evx4-journal-actions { flex-direction: column; align-items: stretch; gap: 12px; }
+    .evx4-btn-primary { width: 100%; justify-content: center; }
+    .evx4-btn-cta { width: 100%; padding: 15px 24px; }
+    .evx4-offer { padding: 28px 22px; }
+    .evx4-footer-inner { flex-direction: column; align-items: center; text-align: center; }
+    .evx4-footer-links { justify-content: center; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="evx4">
+  <div class="evx4-bg-video-wrap" aria-hidden="true">
+    <video class="evx4-bg-video" autoplay muted loop playsinline>
+      <source src="{% static 'videos/evolvex-bg.mp4' %}" type="video/mp4">
+    </video>
+    <div class="evx4-bg-video-overlay"></div>
+  </div>
+
+  <main>
+  <!-- ===== Hero ===== -->
+  <section class="evx4-hero">
+    <div class="evx4-hero-glow"></div>
+    <div class="container">
+      <div class="evx4-badge evx4-reveal">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l2.5 9.5L24 12l-9.5 2.5L12 24l-2.5-9.5L0 12l9.5-2.5z"/></svg>
+        AIOS for your best version
+      </div>
+      <h1 class="evx4-reveal">Life doesn't wait<br>Neither should you.</h1>
+      <p class="subhead evx4-reveal">AI powered  <b>life operating system.</b></p>
+
+      <!-- Journal — now wide, with a functional icon dock on the left -->
+      <div class="evx4-journal-row">
+        <nav class="evx4-dock" aria-label="Quick navigation">
+          <a href="{% url 'home' %}" class="active" title="Home">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+            <span>Home</span>
+          </a>
+          <a href="{% url 'reports_home' %}" title="Dashboard">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+            <span>Dashboard</span>
+          </a>
+          <a href="{% url 'todo_list' %}" title="To-Do Tracker">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12l2.5 2.5L16 9"/></svg>
+            <span>To-Do</span>
+          </a>
+          <a href="{% url 'willpower' %}" title="Willpower">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+            <span>Willpower</span>
+          </a>
+          <a href="{% url 'diet' %}" title="Diet">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8c0-3-2-5-5-5-1 0-2 .5-2.5 1.5C10 3.5 9 3 8 3 5 3 3 5 3 8c0 5 7 12 7 12s7-7 7-12z"/></svg>
+            <span>Diet</span>
+          </a>
+          <a href="{% url 'analyzer_home' %}" title="AI Analyzer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="4"/></svg>
+            <span>Analyzer</span>
+          </a>
+          <a href="{% url 'roadmap_home' %}" title="AI Roadmap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z"/><path d="M8 2v16M16 6v16"/></svg>
+            <span>Roadmap</span>
+          </a>
+          <a href="{% url 'boss_battle' %}" title="Boss Fights">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/></svg>
+            <span>Boss Fights</span>
+          </a>
+          <a href="{% url 'pricing' %}" class="upgrade" title="Upgrade">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20l-2-9-5 4-3-9-3 9-5-4z"/></svg>
+            <span>Upgrade</span>
+          </a>
+        </nav>
+
+        <div class="evx4-journal evx4-reveal">
+          <div class="label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>
+            Today's entry
+          </div>
+          <h2>What happened today?</h2>
+          <p class="sub">No filters. No judgment. Just you and AI.</p>
+
+          <textarea class="evx4-textarea" placeholder="Write your journal…" rows="4"></textarea>
+
+          <div class="evx4-journal-actions">
+            <span class="evx4-journal-hint">Takes less than 2 minutes.</span>
+            <button class="evx4-btn-primary" type="button">
+              Analyze with AI
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Three pillars — moved below the journal, icons matched to spec -->
+      <h2 class="evx4-sr-only">Why EvolveX</h2>
+      <div class="evx4-pillars">
+        <div class="evx4-pillar evx4-reveal">
+          <div class="icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>
+          </div>
+          <h3>AI Understands You</h3>
+          <p>Deeply analyzes your words, mood, and patterns.<br>
+            <span class="highlight">One honest journal entry a day.</span> That's all it takes.</p>
+        </div>
+        <div class="evx4-pillar evx4-reveal">
+          <div class="icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </div>
+          <h3>AI Guides You</h3>
+          <p>The gap between where you are and where you want to be is closed by <span class="highlight">daily honesty</span>.</p>
+        </div>
+        <div class="evx4-pillar evx4-reveal">
+          <div class="icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+          </div>
+          <h3>You Evolve</h3>
+          <p>Build discipline, crush goals, and become <span class="highlight">unstoppable</span>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Feature row ===== -->
+  <section class="evx4-features-wrap">
+    <div class="container">
+      <h2 class="evx4-features-label evx4-reveal">How EvolveX Works</h2>
+      <div class="evx4-features">
+        <div class="evx4-feature evx4-reveal">
+          <div class="num">01</div>
+          <h4>AI Reads Between the Lines</h4>
+          <p>Discover patterns you never noticed.</p>
+        </div>
+        <div class="evx4-feature evx4-reveal">
+          <div class="num">02</div>
+          <h4>Transform Insights Into Action</h4>
+          <p>AI gives you clear next steps to improve.</p>
+        </div>
+        <div class="evx4-feature evx4-reveal">
+          <div class="num">03</div>
+          <h4>Evolve Into Your Best Version</h4>
+          <p>Consistency today. Freedom tomorrow.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Founder's Launch Offer ===== -->
+  <section class="evx4-offer-wrap">
+    <div class="container">
+      <div class="evx4-offer evx4-reveal">
+        <div class="evx4-offer-head">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M2 20h20l-2-9-5 4-3-9-3 9-5-4z"/></svg>
+          <h2>Founder's Launch Offer</h2>
+        </div>
+        <p class="evx4-offer-sub">Limited time offer for early builders.</p>
+
+        <div class="evx4-offer-plans">
+          <div class="evx4-offer-plan">
+            <span class="evx4-offer-plan-label">3-Month Plan</span>
+            <span class="evx4-offer-plan-perk">Get 1 Year Access</span>
+          </div>
+          <div class="evx4-offer-plan">
+            <span class="evx4-offer-plan-label">Yearly Plan</span>
+            <span class="evx4-offer-plan-perk">Get Lifetime Access</span>
+          </div>
+        </div>
+
+        <span class="evx4-offer-ends">Offer ends in</span>
+        <div class="evx4-offer-countdown">
+          <div class="evx4-offer-cd-box"><span class="evx4-offer-cd-num" id="evx4-cd-days">--</span><span class="evx4-offer-cd-lbl">Days</span></div>
+          <div class="evx4-offer-cd-box"><span class="evx4-offer-cd-num" id="evx4-cd-hours">--</span><span class="evx4-offer-cd-lbl">Hours</span></div>
+          <div class="evx4-offer-cd-box"><span class="evx4-offer-cd-num" id="evx4-cd-mins">--</span><span class="evx4-offer-cd-lbl">Minutes</span></div>
+          <div class="evx4-offer-cd-box"><span class="evx4-offer-cd-num" id="evx4-cd-secs">--</span><span class="evx4-offer-cd-lbl">Seconds</span></div>
+        </div>
+
+        <button class="evx4-offer-btn" type="button" onclick="window.location='{% url 'pricing' %}'">
+          View Pricing
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer class="evx4-footer">
+    <div class="container">
+      <div class="evx4-footer-inner">
+        <div class="brand">Evolve<span>X</span></div>
+        <div class="evx4-footer-links">
+          <a href="#">About</a>
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+          <a href="#">Contact</a>
+          <a href="#">Blog</a>
+          <a href="#">Careers</a>
+        </div>
+        <div class="copy">&copy; 2026 EvolveX. All rights reserved.</div>
+      </div>
+    </div>
+  </footer>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var evx4Deadline = new Date("2026-08-19T23:59:59Z").getTime();
+  function evx4Tick() {
+    var diff = Math.max(0, evx4Deadline - Date.now());
+    document.getElementById("evx4-cd-days").textContent = Math.floor(diff / 86400000);
+    document.getElementById("evx4-cd-hours").textContent = String(Math.floor((diff % 86400000) / 3600000)).padStart(2, "0");
+    document.getElementById("evx4-cd-mins").textContent = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
+    document.getElementById("evx4-cd-secs").textContent = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
+  }
+  evx4Tick();
+  setInterval(evx4Tick, 1000);
+
+  var els = document.querySelectorAll('.evx4-reveal');
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  els.forEach(function (el) { io.observe(el); });
+})();
+</script>
+{% endblock %}

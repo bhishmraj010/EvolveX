@@ -1,0 +1,877 @@
+{% extends 'base.html' %}
+{% block title %}AI Roadmap — EvolveX{% endblock %}
+{% block body_class %}theme-eclipse rm-page{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* This dashboard is data-dense (timeline + 2-col grid) — break out of the
+     sitewide centered 1100/1240px .main-content so it uses the full laptop
+     width like the reference design, instead of looking squeezed in the middle. */
+  body.rm-page .main-content { max-width: 1680px; padding-left: 2rem; padding-right: 2rem; }
+  @media (max-width: 1024px) { body.rm-page .main-content { padding-left: 1.25rem; padding-right: 1.25rem; } }
+
+  .rm-grid { display:grid; grid-template-columns: 1fr 340px; gap: 1.5rem; align-items:start; }
+  .rm-main { display:flex; flex-direction:column; gap:1.25rem; min-width:0; }
+  .rm-side { display:flex; flex-direction:column; gap:1.1rem; }
+
+  /* ── Animations ── */
+  @keyframes rmFadeInUp { from { opacity:0; transform: translateY(14px); } to { opacity:1; transform: translateY(0); } }
+  @keyframes rmPop { 0% { transform: scale(.65); } 55% { transform: scale(1.18); } 100% { transform: scale(1); } }
+  @property --pct { syntax: '<number>'; inherits: true; initial-value: 0; }
+
+  .rm-card { animation: rmFadeInUp .5s cubic-bezier(.16,1,.3,1) both; }
+  .rm-main > .rm-card:nth-of-type(1) { animation-delay: .04s; }
+  .rm-main > .rm-card:nth-of-type(2) { animation-delay: .14s; }
+  .rm-main > .rm-card:nth-of-type(3) { animation-delay: .24s; }
+  .rm-side > .rm-card { animation-delay: .1s; }
+  .rm-side > .rm-card:nth-of-type(2) { animation-delay: .18s; }
+  .rm-side > .rm-card:nth-of-type(3) { animation-delay: .26s; }
+  .rm-side > .rm-card:nth-of-type(4) { animation-delay: .34s; }
+  .rm-side > .rm-card:nth-of-type(5) { animation-delay: .42s; }
+  .rm-side > .rm-card:nth-of-type(6) { animation-delay: .5s; }
+
+  .rm-card { transition: transform .2s ease, box-shadow .2s ease; }
+  .rm-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,.35); }
+
+  .rm-card {
+    background: var(--bg-card); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius);
+    padding: 1.35rem; box-shadow: var(--shadow);
+  }
+
+  /* Goal header */
+  .rm-back-btn {
+    display:inline-flex; align-items:center; gap:.35rem; font-size:.78rem; font-weight:600;
+    color: var(--text-secondary); background: rgba(255,255,255,0.03); border:1px solid var(--border);
+    border-radius:999px; padding:.4rem .8rem; margin-bottom:.9rem; text-decoration:none; transition: all .15s;
+  }
+  .rm-back-btn:hover { color: var(--text-primary); border-color: var(--accent); }
+  .rm-goal-card { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  .rm-goal-left { display:flex; align-items:center; gap:1rem; }
+  .rm-goal-icon {
+    width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover)); font-size:1.4rem; flex-shrink:0;
+  }
+  .rm-goal-label { font-size:.72rem; letter-spacing:.06em; color: var(--accent-hover); font-weight:700; text-transform:uppercase; }
+  .rm-goal-title { font-size:1.35rem; font-weight:800; margin:.15rem 0 .3rem; }
+  .rm-goal-meta { display:flex; gap:1rem; flex-wrap:wrap; font-size:.8rem; color: var(--text-secondary); }
+  .rm-status-pill {
+    display:flex; align-items:center; gap:.4rem; background: rgba(16,185,129,0.12);
+    border:1px solid rgba(16,185,129,0.35); color: var(--green); padding:.4rem .8rem;
+    border-radius:999px; font-size:.78rem; font-weight:700; white-space:nowrap;
+  }
+  .rm-status-pill .dot { width:7px; height:7px; border-radius:50%; background: var(--green); }
+  .rm-days-left { font-size:.72rem; color: var(--text-secondary); text-align:right; margin-top:.3rem; }
+
+  /* Growth roadmap — mastery curve chart */
+  .rm-chart-card { overflow: hidden; }
+  .rm-chart-outer { display:flex; gap:.5rem; }
+  .rm-chart-yaxis-label {
+    writing-mode: vertical-rl; transform: rotate(180deg); font-size:.68rem;
+    letter-spacing:.08em; color: var(--text-muted); text-transform:uppercase;
+    font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; padding-bottom:2rem;
+  }
+  .rm-chart-svg-wrap { flex:1; min-width:0; }
+  .rm-chart-plot { position:relative; width:100%; aspect-ratio: 1200 / 300; }
+  .rm-chart-svg { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .rm-chart-labels-overlay { position:absolute; inset:0; pointer-events:none; }
+  .rm-chart-node-label {
+    position:absolute; transform: translateX(-50%) translateY(6px); width:150px; z-index:2;
+    opacity:0; pointer-events:none; transition: opacity .18s ease, transform .18s ease;
+  }
+  .rm-chart-node-label.rm-show { opacity:1; transform: translateX(-50%) translateY(0); }
+  .rm-chart-hit { cursor: pointer; }
+  .rm-chart-dot { opacity:0; transition: opacity .35s ease, r .15s ease; }
+  .rm-chart-dot.rm-dot-hover { filter: drop-shadow(0 0 6px rgba(255,255,255,.35)); }
+  .rm-chart-line-path, .rm-chart-fill-path { opacity: 0; transition: opacity .4s ease; }
+  .rm-chart-line-projected { opacity: .55; }
+  .rm-chart-badge {
+    display:inline-flex; align-items:center; gap:.3rem; font-size:.68rem; font-weight:700;
+    padding:.2rem .55rem; border-radius:999px; white-space:nowrap; border:1px solid transparent;
+  }
+  .rm-chart-badge.completed { background: rgba(16,185,129,0.15); color: var(--green); border-color: rgba(16,185,129,0.35); }
+  .rm-chart-badge.active { background: rgba(59,130,246,0.15); color:#60a5fa; border-color: rgba(59,130,246,0.35); }
+  .rm-chart-badge.locked { background: rgba(245,158,11,0.15); color: var(--gold); border-color: rgba(245,158,11,0.35); }
+  .rm-chart-node-body {
+    margin-top:.35rem; background: rgba(17,17,27,0.92); backdrop-filter: blur(6px);
+    border:1px solid var(--border); border-radius:10px; padding:.5rem .65rem; font-size:.7rem;
+  }
+  .rm-chart-node-label.below .rm-chart-node-body { margin-top:0; margin-bottom:.35rem; }
+  .rm-chart-node-body .lbl { font-weight:700; color: var(--text-primary); font-size:.72rem; margin-bottom:.15rem; }
+  .rm-chart-node-body .sub { color: var(--text-secondary); font-size:.66rem; line-height:1.3; }
+  .rm-chart-goal-box {
+    position:absolute; transform: translateX(-50%); background: rgba(245,158,11,0.12);
+    border:1px solid rgba(245,158,11,0.4); border-radius:10px; padding:.5rem .7rem; font-size:.7rem;
+    text-align:center; white-space:nowrap; z-index:2;
+  }
+  .rm-chart-goal-box .lbl { font-weight:800; color: var(--gold); font-size:.75rem; }
+  .rm-chart-goal-box .sub { color: var(--text-secondary); font-size:.66rem; }
+  .rm-chart-x-label { position:absolute; font-size:.66rem; color: var(--text-muted); transform: translate(-50%, 0); }
+  .rm-chart-axis-row { position:relative; height: 1.4rem; margin-top:.25rem; }
+
+  /* Phases — expandable accordion, no locked state */
+  .rm-phases-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:.9rem; }
+  .rm-expand-all-btn {
+    font-size:.78rem; font-weight:700; color: var(--accent-hover); background:none; border:none; cursor:pointer;
+    display:flex; align-items:center; gap:.3rem; padding:0;
+  }
+  .rm-phase-item { border-bottom:1px solid var(--border); }
+  .rm-phase-item:last-child { border-bottom:none; }
+  .rm-phase-header {
+    display:flex; align-items:center; gap:.9rem; padding: .95rem 0; cursor:pointer; user-select:none;
+    background:none; border:none; width:100%; text-align:left; color: var(--text-primary); font: inherit;
+  }
+  .rm-phase-num {
+    width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:.85rem; color:#fff; flex-shrink:0;
+  }
+  .rm-phase-item:nth-of-type(5n+1) .rm-phase-num { background: linear-gradient(135deg,#7c3aed,#a78bfa); }
+  .rm-phase-item:nth-of-type(5n+2) .rm-phase-num { background: linear-gradient(135deg,#2563eb,#60a5fa); }
+  .rm-phase-item:nth-of-type(5n+3) .rm-phase-num { background: linear-gradient(135deg,#059669,#34d399); }
+  .rm-phase-item:nth-of-type(5n+4) .rm-phase-num { background: linear-gradient(135deg,#d97706,#fbbf24); }
+  .rm-phase-item:nth-of-type(5n+5) .rm-phase-num { background: linear-gradient(135deg,#db2777,#f472b6); }
+  .rm-phase-header.completed .rm-phase-num { position:relative; }
+  .rm-phase-header.completed .rm-phase-num::after {
+    content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background: rgba(16,185,129,0.92); border-radius:50%; font-size:.9rem;
+  }
+  .rm-phase-info { flex:1; min-width:0; }
+  .rm-phase-title { font-weight:700; font-size:.92rem; }
+  .rm-phase-sub { font-size:.72rem; color: var(--text-secondary); margin-top:.1rem; }
+  .rm-phase-meta-right { display:flex; align-items:center; gap:.9rem; flex-shrink:0; }
+  .rm-phase-tasks-count { font-size:.72rem; color: var(--text-secondary); white-space:nowrap; }
+  .rm-phase-chevron { transition: transform .3s cubic-bezier(.16,1,.3,1); color: var(--text-muted); flex-shrink:0; }
+  .rm-phase-item.open .rm-phase-chevron { transform: rotate(180deg); }
+  .rm-phase-bar-mini { width:70px; flex-shrink:0; }
+  .rm-bar-track { height:6px; border-radius:99px; background: var(--border); overflow:hidden; }
+  .rm-bar-fill { height:100%; border-radius:99px; background: linear-gradient(90deg, var(--accent), var(--cyan)); width:0; transition: width 1.1s cubic-bezier(.16,1,.3,1); }
+  .rm-phase-pct { font-size:.68rem; color: var(--text-secondary); text-align:right; margin-top:.2rem; }
+
+  .rm-phase-body {
+    max-height:0; overflow:hidden; opacity:0;
+    transition: max-height .35s cubic-bezier(.4,0,.2,1), opacity .3s ease;
+  }
+  .rm-phase-item.open .rm-phase-body { opacity:1; }
+  .rm-phase-body-inner { padding: 0 0 1.1rem .5rem; }
+
+  .rm-day-block { margin-bottom: .6rem; border: 1px solid var(--border); border-radius: 10px; overflow:hidden; }
+  .rm-day-block:last-child { margin-bottom:0; }
+  .rm-day-header {
+    display:flex; align-items:center; gap:.5rem; width:100%; padding:.55rem .7rem; cursor:pointer;
+    background: rgba(255,255,255,0.015); border:none; text-align:left; color: var(--text-primary); font: inherit;
+  }
+  .rm-day-header:hover { background: rgba(255,255,255,0.03); }
+  .rm-day-header-label { display:flex; align-items:center; gap:.5rem; flex:1; min-width:0; }
+  .rm-day-label {
+    font-size:.72rem; font-weight:700; color: var(--text-secondary);
+    text-transform:uppercase; letter-spacing:.04em; white-space:nowrap;
+  }
+  .rm-day-meta { font-size:.68rem; color: var(--text-muted); white-space:nowrap; }
+  .rm-day-done-check { color: var(--green); flex-shrink:0; }
+  .rm-day-chevron { width:15px; height:15px; color: var(--text-muted); flex-shrink:0; transition: transform .28s cubic-bezier(.16,1,.3,1); }
+  .rm-day-block.open .rm-day-chevron { transform: rotate(180deg); }
+  .rm-day-body { max-height:0; overflow:hidden; transition: max-height .3s cubic-bezier(.4,0,.2,1); }
+  .rm-day-body-inner { padding: .3rem .7rem .65rem; }
+  .rm-today-badge {
+    font-size:.62rem; background: rgba(124,58,237,0.18); color: var(--accent-hover);
+    padding:.1rem .5rem; border-radius:999px; font-weight:800; letter-spacing:.02em;
+  }
+
+  /* "Generating next day…" shimmer placeholder */
+  .rm-day-generating .rm-day-label { color: var(--text-muted); }
+  .rm-shimmer-dot {
+    display:inline-block; width:7px; height:7px; border-radius:50%; background: var(--accent-hover);
+    animation: rmPulseDot 1s ease-in-out infinite;
+  }
+  @keyframes rmPulseDot { 0%,100% { opacity:.3; transform:scale(.8);} 50% { opacity:1; transform:scale(1.15);} }
+  .rm-shimmer-row {
+    height:34px; border-radius:8px; margin-top:.4rem; width:100%;
+    background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.07) 37%, rgba(255,255,255,0.03) 63%);
+    background-size: 400% 100%; animation: rmShimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes rmShimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+  /* Checkpoint clear */
+  .rm-checkpoint-cta {
+    display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-top:.85rem;
+    background: rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.3); border-radius:12px; padding:.75rem .9rem;
+  }
+  .rm-checkpoint-cta .lbl { font-size:.82rem; font-weight:700; }
+  .rm-checkpoint-cta .sub { font-size:.7rem; color: var(--text-secondary); margin-top:.1rem; }
+  .rm-checkpoint-cta.rm-remedial-pending {
+    background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.3);
+  }
+
+  /* Today's missions */
+  .rm-mission-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:.5rem; }
+  .rm-mission-row {
+    display:flex; align-items:center; gap:.75rem; padding:.7rem 0; border-bottom:1px solid var(--border);
+  }
+  .rm-mission-row:last-child { border-bottom:none; }
+  .rm-mission-check {
+    width:22px; height:22px; border-radius:50%; border:2px solid var(--border); flex-shrink:0; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition: all .15s; background:none;
+  }
+  .rm-mission-check.checked { background: var(--green); border-color: var(--green); color:#04140d; animation: rmPop .3s ease; }
+  .rm-mission-title { font-size:.86rem; font-weight:600; }
+  .rm-mission-title.checked { text-decoration: line-through; color: var(--text-muted); }
+  .rm-mission-tag {
+    font-size:.65rem; padding:.15rem .5rem; border-radius:999px; font-weight:700; text-transform:capitalize;
+  }
+  .rm-mission-tag.learning { background: rgba(59,130,246,0.15); color:#60a5fa; }
+  .rm-mission-tag.practice { background: rgba(16,185,129,0.15); color: var(--green); }
+  .rm-mission-tag.revision { background: rgba(245,158,11,0.15); color: var(--gold); }
+  .rm-mission-tag.challenge { background: rgba(236,72,153,0.15); color: var(--pink); }
+  .rm-mission-min { font-size:.75rem; color: var(--text-secondary); margin-left:auto; white-space:nowrap; }
+
+  .rm-adaptive-banner {
+    display:flex; align-items:center; gap:.5rem; background: rgba(124,58,237,0.1);
+    border:1px solid rgba(124,58,237,0.3); border-radius:10px; padding:.55rem .8rem;
+    font-size:.78rem; color: var(--text-primary); margin-bottom: .75rem;
+  }
+
+  /* Ring */
+  .rm-ring-wrap { display:flex; flex-direction:column; align-items:center; gap:.2rem; }
+  .rm-ring { width:120px; height:120px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background: conic-gradient(var(--accent) calc(var(--pct) * 1%), var(--border) 0); position:relative;
+    transition: --pct 1.2s cubic-bezier(.16,1,.3,1); }
+  .rm-ring::before { content:''; position:absolute; inset:9px; border-radius:50%; background: var(--bg-card-solid); }
+  .rm-ring span { position:relative; z-index:1; font-size:1.5rem; font-weight:800; }
+
+  /* Sidebar stat rows */
+  .rm-stat-row { display:flex; align-items:center; justify-content:space-between; padding:.6rem 0; border-bottom:1px solid var(--border); }
+  .rm-stat-row:last-child { border-bottom:none; }
+  .rm-stat-label { display:flex; align-items:center; gap:.5rem; font-size:.82rem; color: var(--text-secondary); }
+  .rm-stat-value { font-weight:700; font-size:.9rem; }
+
+  /* AI recommendation lists */
+  .rm-reco-list { list-style:none; display:flex; flex-direction:column; gap:.5rem; }
+  .rm-reco-list li { font-size:.8rem; color: var(--text-secondary); display:flex; gap:.5rem; align-items:flex-start; }
+  .rm-reco-list li i { color: var(--accent-hover); flex-shrink:0; margin-top:.15rem; }
+
+  /* Resources */
+  .rm-resource-item { display:flex; align-items:center; gap:.65rem; padding:.6rem 0; border-bottom:1px solid var(--border); }
+  .rm-resource-item:last-child { border-bottom:none; }
+  .rm-resource-icon { width:34px; height:34px; border-radius:9px; background: rgba(255,255,255,0.04); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .rm-resource-title { font-size:.82rem; font-weight:600; }
+  .rm-resource-sub { font-size:.7rem; color: var(--text-secondary); }
+  .rm-free-badge { margin-left:auto; font-size:.65rem; background: rgba(16,185,129,0.15); color: var(--green); padding:.15rem .5rem; border-radius:999px; font-weight:700; }
+
+  .rm-section-title { display:flex; align-items:center; justify-content:space-between; margin-bottom:.9rem; }
+  .rm-section-title h3 { font-size:1rem; font-weight:700; display:flex; align-items:center; gap:.4rem; }
+
+  @media (max-width: 980px) { .rm-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<a href="{% url 'roadmap_onboarding' %}" class="rm-back-btn"><i data-lucide="arrow-left" class="lucide" style="width:14px;height:14px;"></i> Back</a>
+
+<div class="rm-card rm-goal-card" style="margin-bottom:1.25rem;">
+  <div class="rm-goal-left">
+    <div class="rm-goal-icon"><i data-lucide="target" class="lucide"></i></div>
+    <div>
+      <div class="rm-goal-label">Your Goal</div>
+      <div class="rm-goal-title">{{ roadmap.goal }}</div>
+      <div class="rm-goal-meta">
+        {% if roadmap.target_deadline %}<span><i data-lucide="calendar" class="lucide"></i> Target: {{ roadmap.target_deadline|date:"d M Y" }}</span>{% endif %}
+        <span><i data-lucide="clock" class="lucide"></i> {{ roadmap.daily_minutes }} min/day</span>
+        <span><i data-lucide="bar-chart-2" class="lucide"></i> {{ roadmap.get_current_skill_level_display }}</span>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="rm-status-pill"><span class="dot"></span> {{ roadmap.get_status_display }}</div>
+    {% if days_left is not None %}<div class="rm-days-left">{{ days_left }} days left</div>{% endif %}
+    <form method="post" action="{% url 'roadmap_regenerate' roadmap.id %}" style="margin-top:.5rem;"
+          onsubmit="return confirm('Regenerate roadmap based on your current progress?');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary" style="font-size:.75rem; padding:.5rem .8rem;">
+        <i data-lucide="refresh-cw" class="lucide"></i> Regenerate Roadmap
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="rm-grid">
+  <div class="rm-main">
+
+    <!-- Growth roadmap: mastery curve -->
+    <div class="rm-card rm-chart-card">
+      <div class="rm-section-title"><h3><i data-lucide="trending-up" class="lucide"></i> Your Growth Roadmap</h3></div>
+
+      {% if growth_chart %}
+      <div class="rm-chart-outer">
+        <div class="rm-chart-yaxis-label">Mastery</div>
+        <div class="rm-chart-svg-wrap">
+          <div class="rm-chart-plot" data-progress-pct="{{ roadmap.overall_completion_pct }}">
+          <svg class="rm-chart-svg" viewBox="0 0 {{ growth_chart.view_w }} {{ growth_chart.view_h }}" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="rmMasteryGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#7c3aed"/>
+                <stop offset="35%" stop-color="#06b6d4"/>
+                <stop offset="65%" stop-color="#10b981"/>
+                <stop offset="100%" stop-color="#f59e0b"/>
+              </linearGradient>
+              <linearGradient id="rmMasteryFill" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.18"/>
+                <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+
+            {% for yl in growth_chart.y_labels %}
+            <line x1="{{ growth_chart.pad_l }}" y1="{{ yl.y }}" x2="{{ growth_chart.view_w }}" y2="{{ yl.y }}" stroke="var(--border)" stroke-width="1" stroke-dasharray="{% if yl.label == '0%' %}0{% else %}3,4{% endif %}"/>
+            <text x="4" y="{{ yl.y }}" fill="var(--text-muted)" font-size="11" dominant-baseline="middle">{{ yl.label }}</text>
+            {% endfor %}
+
+            {% for node in growth_chart.nodes %}
+            <line x1="{{ node.svg_x }}" y1="{{ node.svg_y }}" x2="{{ node.svg_x }}" y2="{{ growth_chart.axis_bottom_y }}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,4"/>
+            {% endfor %}
+            <line x1="{{ growth_chart.goal_x }}" y1="{{ growth_chart.goal_y }}" x2="{{ growth_chart.goal_x }}" y2="{{ growth_chart.axis_bottom_y }}" stroke="var(--gold)" stroke-width="1" stroke-dasharray="3,4" opacity="0.5"/>
+
+            <path class="rm-chart-fill-path" d="{{ growth_chart.path_d }} L {{ growth_chart.goal_x }},{{ growth_chart.axis_bottom_y }} L {{ growth_chart.pad_l }},{{ growth_chart.axis_bottom_y }} Z" fill="url(#rmMasteryFill)" stroke="none"/>
+            <path class="rm-chart-line-projected" d="{{ growth_chart.path_d }}" fill="none" stroke="var(--text-muted)" stroke-width="2.5" stroke-dasharray="4,6" stroke-linecap="round"/>
+            <path class="rm-chart-line-path" d="{{ growth_chart.path_d }}" fill="none" stroke="url(#rmMasteryGrad)" stroke-width="3.5" stroke-linecap="round"/>
+
+            {% for node in growth_chart.nodes %}
+            <circle class="rm-chart-dot" data-idx="{{ forloop.counter0 }}" cx="{{ node.svg_x }}" cy="{{ node.svg_y }}" r="9"
+              fill="{% if node.status == 'completed' %}var(--green){% elif node.status == 'active' %}#3b82f6{% else %}var(--gold){% endif %}"
+              stroke="var(--bg-card-solid)" stroke-width="3"/>
+            {% endfor %}
+            <circle class="rm-chart-dot" data-idx="goal" cx="{{ growth_chart.goal_x }}" cy="{{ growth_chart.goal_y }}" r="10" fill="var(--gold)" stroke="var(--bg-card-solid)" stroke-width="3"/>
+
+            {% for node in growth_chart.nodes %}
+            <circle class="rm-chart-hit" data-idx="{{ forloop.counter0 }}" cx="{{ node.svg_x }}" cy="{{ node.svg_y }}" r="18" fill="transparent"/>
+            {% endfor %}
+          </svg>
+
+          <!-- Absolutely-positioned label cards — percentages map 1:1 to the SVG viewBox since this box shares its exact aspect ratio.
+               Hidden by default; a checkpoint's details only show on hover/tap of its dot (see rm-chart-hit above). -->
+          <div class="rm-chart-labels-overlay">
+            {% for node in growth_chart.nodes %}
+            <div class="rm-chart-node-label {% if node.label_below %}below{% endif %}" data-idx="{{ node.index }}"
+                 style="left: {{ node.left_pct }}%; top: {{ node.top_pct }}%;">
+              <span class="rm-chart-badge {{ node.status }}">
+                {% if node.status == "completed" %}<i data-lucide="check" class="lucide" style="width:11px;height:11px;"></i>{% elif node.status == "active" %}<i data-lucide="loader" class="lucide" style="width:11px;height:11px;"></i>{% else %}<i data-lucide="lock" class="lucide" style="width:11px;height:11px;"></i>{% endif %}
+                Checkpoint {{ node.index|add:1 }}
+              </span>
+              <div class="rm-chart-node-body">
+                <div class="lbl">{{ node.phase.title|truncatechars:26 }}</div>
+                <div class="sub">{% if node.status == "completed" %}Complete{% else %}Target{% endif %} · {{ node.date|date:"d M 'y" }}</div>
+              </div>
+            </div>
+            {% endfor %}
+
+            <div class="rm-chart-goal-box" style="left: {{ growth_chart.goal_left_pct }}%; top: {{ growth_chart.goal_top_pct }}%;">
+              <div class="lbl">🏆 GOAL</div>
+              <div class="sub">{{ growth_chart.goal_date|date:"d M Y" }}</div>
+            </div>
+          </div>
+          </div>
+
+          <!-- X axis month labels -->
+          <div class="rm-chart-axis-row">
+            {% for xl in growth_chart.x_labels %}
+            <span class="rm-chart-x-label" style="left: {{ xl.left_pct }}%;">{{ xl.label }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <p style="color:var(--text-secondary); font-size:.85rem;">Chart will appear once your roadmap has phases.</p>
+      {% endif %}
+    </div>
+
+    <!-- Phases (expandable, tasks live inside) -->
+    <div class="rm-card">
+      <div class="rm-phases-toolbar">
+        <h3 style="font-size:1rem; font-weight:700; display:flex; align-items:center; gap:.4rem;"><i data-lucide="layers" class="lucide"></i> Roadmap Phases</h3>
+        <button type="button" class="rm-expand-all-btn" id="rm-expand-all"><i data-lucide="chevrons-down-up" class="lucide" style="width:14px;height:14px;"></i> Expand All</button>
+      </div>
+
+      {% if mission.adaptive_note %}
+      <div class="rm-adaptive-banner"><i data-lucide="zap" class="lucide"></i> {{ mission.adaptive_note }}</div>
+      {% endif %}
+
+      {% for phase in phases %}
+      <div class="rm-phase-item {{ phase.status }} {% if phase.status == 'active' %}open{% endif %}">
+        <button type="button" class="rm-phase-header {{ phase.status }}" onclick="rmTogglePhase(this)">
+          <div class="rm-phase-num">{{ forloop.counter }}</div>
+          <div class="rm-phase-info">
+            <div class="rm-phase-title">{{ phase.title }}{% if phase.is_remedial_for %} <span class="rm-today-badge" style="background:rgba(59,130,246,0.18); color:#60a5fa;">REMEDIAL</span>{% endif %}</div>
+            <div class="rm-phase-sub">{{ phase.difficulty|title }} · {{ phase.duration_days }} days · {{ phase.xp_reward }} XP</div>
+          </div>
+          <div class="rm-phase-meta-right">
+            <span class="rm-phase-tasks-count">{{ phase.daily_missions.all|length }} day{{ phase.daily_missions.all|length|pluralize }} logged</span>
+            <div class="rm-phase-bar-mini">
+              <div class="rm-bar-track"><div class="rm-bar-fill rm-animate-width" data-w="{{ phase.completion_pct }}"></div></div>
+              <div class="rm-phase-pct">{{ phase.completion_pct }}%</div>
+            </div>
+            <i data-lucide="chevron-down" class="lucide rm-phase-chevron"></i>
+          </div>
+        </button>
+
+        <div class="rm-phase-body">
+          <div class="rm-phase-body-inner">
+            {% for dm in phase.daily_missions.all %}
+            <div class="rm-day-block {% if forloop.last %}open{% endif %}">
+              <button type="button" class="rm-day-header" onclick="rmToggleDay(this)">
+                <div class="rm-day-header-label">
+                  {% if dm.status == "completed" %}<i data-lucide="check-circle-2" class="lucide rm-day-done-check" style="width:14px;height:14px;"></i>{% endif %}
+                  <span class="rm-day-label">{{ dm.date|date:"D, d M" }}</span>
+                  {% if forloop.last %}<span class="rm-today-badge">CURRENT</span>{% endif %}
+                </div>
+                <span class="rm-day-meta">{{ dm.tasks|length }} task{{ dm.tasks|length|pluralize }}{% if dm.status == "completed" %} · done{% endif %}</span>
+                <i data-lucide="chevron-down" class="lucide rm-day-chevron"></i>
+              </button>
+              <div class="rm-day-body">
+                <div class="rm-day-body-inner">
+                  {% for task in dm.tasks %}
+                  <div class="rm-mission-row">
+                    <button type="button" class="rm-mission-check {% if task.completed %}checked{% endif %}"
+                            onclick="rmToggleTask({{ dm.id }}, '{{ task.id }}', this)">
+                      {% if task.completed %}<i data-lucide="check" class="lucide" style="width:12px;height:12px;"></i>{% endif %}
+                    </button>
+                    <div style="flex:1; min-width:0;">
+                      <div class="rm-mission-title {% if task.completed %}checked{% endif %}">{{ task.title }}</div>
+                      {% if task.description %}<div class="rm-phase-sub">{{ task.description }}</div>{% endif %}
+                    </div>
+                    <span class="rm-mission-tag {{ task.type }}">{{ task.type }}</span>
+                    <span class="rm-mission-min">{{ task.minutes }} min</span>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            {% empty %}
+            <p style="color:var(--text-secondary); font-size:.8rem;">No missions logged in this phase yet.</p>
+            {% endfor %}
+
+            {% if phase.status == "active" and phase.checkpoint and phase.completion_pct >= 99 and not phase.checkpoint.is_completed %}
+              {% if phase.is_remedial_for %}
+              <div class="rm-checkpoint-cta">
+                <div>
+                  <div class="lbl">🏆 {{ phase.checkpoint.title }}</div>
+                  <div class="sub">{{ phase.checkpoint.description }}</div>
+                </div>
+                <form method="post" action="{% url 'roadmap_clear_checkpoint' phase.checkpoint.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-gold" style="font-size:.7rem; padding:.5rem .8rem; white-space:nowrap;">Clear Checkpoint</button>
+                </form>
+              </div>
+              {% elif phase.pending_remedial %}
+              <div class="rm-checkpoint-cta rm-remedial-pending">
+                <div>
+                  <div class="lbl">📘 Remedial phase in progress</div>
+                  <div class="sub">Finish "{{ phase.pending_remedial.title }}" first — you'll retake this test right after.</div>
+                </div>
+              </div>
+              {% else %}
+              <div class="rm-checkpoint-cta">
+                <div>
+                  <div class="lbl">🏆 {{ phase.checkpoint.title }}</div>
+                  {% with t=phase.latest_test %}
+                  <div class="sub">
+                    {% if t and t.status == "graded" and not t.passed %}
+                      Last attempt: {{ t.score }}/{{ t.total_marks }} (needed {{ t.passing_marks }}) — retake below
+                    {% else %}
+                      Pass the checkpoint test (16/50) to unlock the next phase
+                    {% endif %}
+                  </div>
+                  {% endwith %}
+                </div>
+                <a href="{% url 'roadmap_take_test' phase.id %}" class="btn btn-gold" style="font-size:.7rem; padding:.5rem .8rem; white-space:nowrap; text-decoration:none;">Take Checkpoint Test</a>
+              </div>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <p style="color:var(--text-secondary); font-size:.85rem;">No phases yet.</p>
+      {% endfor %}
+    </div>
+
+  </div>
+
+  <div class="rm-side">
+
+    <!-- Progress ring -->
+    <div class="rm-card" style="text-align:center;">
+      <div class="rm-section-title" style="justify-content:center;"><h3><i data-lucide="pie-chart" class="lucide"></i> Roadmap Progress</h3></div>
+      <div class="rm-ring-wrap">
+        <div class="rm-ring" id="rm-progress-ring" data-target-pct="{{ roadmap.overall_completion_pct }}" style="--pct: 0;"><span>{{ roadmap.overall_completion_pct }}%</span></div>
+        <div style="font-size:.75rem; color:var(--text-secondary); margin-top:.4rem;">Overall Progress</div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="rm-card">
+      <div class="rm-stat-row">
+        <span class="rm-stat-label"><i data-lucide="gem" class="lucide"></i> Roadmap XP</span>
+        <span class="rm-stat-value">{{ roadmap.xp_earned }} / {{ roadmap.xp_total_available }}</span>
+      </div>
+      <div class="rm-stat-row">
+        <span class="rm-stat-label"><i data-lucide="flame" class="lucide"></i> Day Streak</span>
+        <span class="rm-stat-value">{{ roadmap.day_streak }}</span>
+      </div>
+      <div class="rm-stat-row">
+        <span class="rm-stat-label"><i data-lucide="target" class="lucide"></i> Success Probability</span>
+        <span class="rm-stat-value">{{ roadmap.success_probability }}%</span>
+      </div>
+      <div class="rm-stat-row">
+        <span class="rm-stat-label"><i data-lucide="gauge" class="lucide"></i> Learning Speed</span>
+        <span class="rm-stat-value">{{ roadmap.get_learning_speed_display }}</span>
+      </div>
+      <div class="rm-stat-row">
+        <span class="rm-stat-label"><i data-lucide="activity" class="lucide"></i> Consistency</span>
+        <span class="rm-stat-value">{{ roadmap.consistency_score }}%</span>
+      </div>
+      {% if roadmap.predicted_completion_date %}
+      <div class="rm-stat-row">
+        <span class="rm-stat-label"><i data-lucide="flag" class="lucide"></i> Est. Finish</span>
+        <span class="rm-stat-value">{{ roadmap.predicted_completion_date|date:"d M Y" }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if roadmap.what_to_learn_next %}
+    <div class="rm-card">
+      <div class="rm-section-title"><h3 style="font-size:.9rem;"><i data-lucide="arrow-right-circle" class="lucide"></i> What to Learn Next</h3></div>
+      <ul class="rm-reco-list">
+        {% for item in roadmap.what_to_learn_next %}<li><i data-lucide="chevron-right" class="lucide"></i> {{ item }}</li>{% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if roadmap.learning_hacks %}
+    <div class="rm-card">
+      <div class="rm-section-title"><h3 style="font-size:.9rem;"><i data-lucide="lightbulb" class="lucide"></i> Learning Hacks</h3></div>
+      <ul class="rm-reco-list">
+        {% for item in roadmap.learning_hacks %}<li><i data-lucide="sparkle" class="lucide"></i> {{ item }}</li>{% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if roadmap.common_mistakes %}
+    <div class="rm-card">
+      <div class="rm-section-title"><h3 style="font-size:.9rem;"><i data-lucide="alert-triangle" class="lucide"></i> Common Mistakes</h3></div>
+      <ul class="rm-reco-list">
+        {% for item in roadmap.common_mistakes %}<li><i data-lucide="x-circle" class="lucide"></i> {{ item }}</li>{% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if resources %}
+    <div class="rm-card">
+      <div class="rm-section-title"><h3 style="font-size:.9rem;"><i data-lucide="book-open" class="lucide"></i> Recommended Resources</h3></div>
+      {% for r in resources %}
+      <div class="rm-resource-item">
+        <div class="rm-resource-icon">
+          {% if r.resource_type == "youtube" %}<i data-lucide="play" class="lucide"></i>
+          {% elif r.resource_type == "book" %}<i data-lucide="book" class="lucide"></i>
+          {% elif r.resource_type == "course" %}<i data-lucide="graduation-cap" class="lucide"></i>
+          {% elif r.resource_type == "practice" %}<i data-lucide="code" class="lucide"></i>
+          {% elif r.resource_type == "documentation" %}<i data-lucide="file-text" class="lucide"></i>
+          {% else %}<i data-lucide="link" class="lucide"></i>{% endif %}
+        </div>
+        <div style="min-width:0;">
+          {% if r.url %}<a href="{{ r.url }}" target="_blank" rel="noopener" class="rm-resource-title" style="color:var(--text-primary); text-decoration:none;">{{ r.title }}</a>{% else %}<div class="rm-resource-title">{{ r.title }}</div>{% endif %}
+          <div class="rm-resource-sub">{{ r.get_resource_type_display }}</div>
+        </div>
+        {% if r.is_free %}<span class="rm-free-badge">FREE</span>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function rmToggleTask(missionId, taskId, btn) {
+  const row = btn.closest('.rm-mission-row');
+  const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  fetch(`/roadmap/mission/${missionId}/toggle/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded'},
+    body: `task_id=${encodeURIComponent(taskId)}`,
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (!data.ok) return;
+    // Instant visual feedback — no waiting on AI generation for this part.
+    btn.classList.toggle('checked');
+    const titleEl = row.querySelector('.rm-mission-title');
+    titleEl.classList.toggle('checked');
+    btn.innerHTML = btn.classList.contains('checked')
+      ? '<i data-lucide="check" class="lucide" style="width:12px;height:12px;"></i>' : '';
+    if (window.refreshIcons) window.refreshIcons();
+
+    if (data.status === 'completed') {
+      const placeholder = rmShowGeneratingPlaceholder(btn);
+      rmPollNextMission(missionId, csrftoken, placeholder, 0);
+    }
+  })
+  .catch(() => {});
+}
+
+function rmPollNextMission(missionId, csrftoken, placeholder, attempt) {
+  if (!placeholder || !placeholder.isConnected) return; // user navigated away / DOM changed
+  const MAX_ATTEMPTS = 20; // ~ up to ~40s of polling before giving up gracefully
+
+  fetch(`/roadmap/mission/${missionId}/next/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded'},
+  })
+  .then(r => r.json())
+  .then(nd => {
+    if (nd.next_mission) {
+      rmInsertNextMission(placeholder, nd.next_mission);
+    } else if (nd.status === 'generating' && attempt < MAX_ATTEMPTS) {
+      // A background prefetch is already in flight — don't fire another
+      // AI call, just check back shortly.
+      setTimeout(() => rmPollNextMission(missionId, csrftoken, placeholder, attempt + 1), 2000);
+    } else {
+      placeholder.remove(); // gave up or genuinely nothing to show yet — next page load will pick it up
+    }
+  })
+  .catch(() => { placeholder.remove(); });
+}
+
+function rmShowGeneratingPlaceholder(triggerBtn) {
+  const phaseItem = triggerBtn.closest('.rm-phase-item');
+  const inner = phaseItem ? phaseItem.querySelector('.rm-phase-body-inner') : null;
+  if (!inner) return null;
+
+  const el = document.createElement('div');
+  el.className = 'rm-day-block rm-day-generating open';
+  el.innerHTML = `
+    <div class="rm-day-header" style="cursor:default;">
+      <div class="rm-day-header-label"><span class="rm-shimmer-dot"></span> <span class="rm-day-label">Generating next day…</span></div>
+    </div>
+    <div class="rm-day-body" style="max-height:none;">
+      <div class="rm-day-body-inner">
+        <div class="rm-shimmer-row"></div>
+        <div class="rm-shimmer-row" style="width:80%;"></div>
+      </div>
+    </div>
+  `;
+  const checkpointCta = inner.querySelector('.rm-checkpoint-cta');
+  if (checkpointCta) inner.insertBefore(el, checkpointCta); else inner.appendChild(el);
+
+  const body = phaseItem.querySelector('.rm-phase-body');
+  if (body && phaseItem.classList.contains('open')) body.style.maxHeight = body.scrollHeight + 'px';
+
+  return el;
+}
+
+function rmEscapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str == null ? '' : String(str);
+  return d.innerHTML;
+}
+
+function rmInsertNextMission(placeholderEl, m) {
+  const inner = placeholderEl.closest('.rm-phase-body-inner');
+  const phaseItem = placeholderEl.closest('.rm-phase-item');
+  if (!inner || !phaseItem) { placeholderEl.remove(); return; }
+
+  inner.querySelectorAll('.rm-today-badge').forEach(b => b.remove());
+
+  // Collapse whichever day was open before (it just got completed) so the
+  // accordion doesn't keep growing — only the newest day stays expanded.
+  inner.querySelectorAll('.rm-day-block.open').forEach(db => {
+    if (db === placeholderEl) return;
+    db.classList.remove('open');
+    const b = db.querySelector('.rm-day-body');
+    if (b) setDayBodyClosed(b);
+    const chip = db.querySelector('.rm-day-header .rm-day-meta');
+    if (chip && !chip.textContent.includes('done')) chip.textContent += ' · done';
+    const label = db.querySelector('.rm-day-header-label');
+    if (label && !label.querySelector('.rm-day-done-check')) {
+      label.insertAdjacentHTML('afterbegin', '<i data-lucide="check-circle-2" class="lucide rm-day-done-check" style="width:14px;height:14px;"></i>');
+    }
+  });
+
+  const block = document.createElement('div');
+  block.className = 'rm-day-block open';
+  block.innerHTML = `
+    <button type="button" class="rm-day-header" onclick="rmToggleDay(this)">
+      <div class="rm-day-header-label">
+        <span class="rm-day-label">${rmEscapeHtml(m.date_label)}</span>
+        <span class="rm-today-badge">CURRENT</span>
+      </div>
+      <span class="rm-day-meta">${m.tasks.length} task${m.tasks.length === 1 ? '' : 's'}</span>
+      <i data-lucide="chevron-down" class="lucide rm-day-chevron"></i>
+    </button>
+    <div class="rm-day-body">
+      <div class="rm-day-body-inner">
+        ${m.tasks.map(t => `
+          <div class="rm-mission-row">
+            <button type="button" class="rm-mission-check" onclick="rmToggleTask(${m.id}, '${t.id}', this)"></button>
+            <div style="flex:1; min-width:0;">
+              <div class="rm-mission-title">${rmEscapeHtml(t.title)}</div>
+              ${t.description ? `<div class="rm-phase-sub">${rmEscapeHtml(t.description)}</div>` : ''}
+            </div>
+            <span class="rm-mission-tag ${rmEscapeHtml(t.type)}">${rmEscapeHtml(t.type)}</span>
+            <span class="rm-mission-min">${t.minutes} min</span>
+          </div>`).join('')}
+      </div>
+    </div>
+  `.trim();
+
+  block.style.overflow = 'hidden';
+  block.style.opacity = '0';
+  placeholderEl.replaceWith(block);
+
+  if (window.refreshIcons) window.refreshIcons();
+
+  requestAnimationFrame(() => {
+    block.style.transition = 'opacity .45s ease';
+    block.style.opacity = '1';
+    setDayBodyOpen(block.querySelector('.rm-day-body'));
+  });
+
+  const body = phaseItem.querySelector('.rm-phase-body');
+  if (body && phaseItem.classList.contains('open')) {
+    const growTick = () => { body.style.maxHeight = body.scrollHeight + 'px'; };
+    growTick();
+    setTimeout(growTick, 500);
+  }
+
+  const countEl = phaseItem.querySelector('.rm-phase-tasks-count');
+  if (countEl) {
+    const n = inner.querySelectorAll('.rm-day-block').length;
+    countEl.textContent = n + ' day' + (n === 1 ? '' : 's') + ' logged';
+  }
+
+  block.animate(
+    [{ boxShadow: '0 0 0 0 rgba(124,58,237,0)' }, { boxShadow: '0 0 0 6px rgba(124,58,237,0.12)' }, { boxShadow: '0 0 0 0 rgba(124,58,237,0)' }],
+    { duration: 900, easing: 'ease-out' }
+  );
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  // ── Growth chart: draw the mastery curve up to the user's CURRENT
+  // progress only (the dashed rm-chart-line-projected path underneath
+  // already shows the full projected route to the goal) ──
+  const linePath = document.querySelector('.rm-chart-line-path');
+  const fillPath = document.querySelector('.rm-chart-fill-path');
+  const plot = document.querySelector('.rm-chart-plot');
+  const progressPct = plot ? Math.max(2, Math.min(100, parseFloat(plot.dataset.progressPct || '0'))) : 100;
+  if (linePath) {
+    const len = linePath.getTotalLength();
+    const travelled = len * (progressPct / 100);
+    linePath.style.strokeDasharray = len;
+    linePath.style.strokeDashoffset = len;
+    linePath.getBoundingClientRect(); // force reflow before transition kicks in
+    requestAnimationFrame(() => {
+      linePath.style.transition = 'stroke-dashoffset 1.3s cubic-bezier(.16,1,.3,1)';
+      linePath.style.strokeDashoffset = String(len - travelled);
+      linePath.style.opacity = '1';
+      if (fillPath) { fillPath.style.transition = 'opacity 1s ease .3s'; fillPath.style.opacity = '1'; }
+    });
+  }
+  document.querySelectorAll('.rm-chart-dot').forEach((dot, i) => {
+    setTimeout(() => { dot.style.opacity = '1'; }, 250 + i * 90);
+  });
+
+  // ── Growth chart: checkpoint details only show on hover/tap of the dot ──
+  document.querySelectorAll('.rm-chart-hit').forEach((hit) => {
+    const idx = hit.dataset.idx;
+    const label = document.querySelector(`.rm-chart-node-label[data-idx="${idx}"]`);
+    const dot = document.querySelector(`.rm-chart-dot[data-idx="${idx}"]`);
+    const show = () => { if (label) label.classList.add('rm-show'); if (dot) dot.setAttribute('r', '12'); if (dot) dot.classList.add('rm-dot-hover'); };
+    const hide = () => { if (label) label.classList.remove('rm-show'); if (dot) dot.setAttribute('r', '9'); if (dot) dot.classList.remove('rm-dot-hover'); };
+    hit.addEventListener('mouseenter', show);
+    hit.addEventListener('mouseleave', hide);
+    hit.addEventListener('click', () => { // tap-to-toggle for touch devices
+      const showing = label && label.classList.contains('rm-show');
+      document.querySelectorAll('.rm-chart-node-label.rm-show').forEach(l => l.classList.remove('rm-show'));
+      document.querySelectorAll('.rm-chart-dot').forEach(d => { d.setAttribute('r', d.dataset.idx === 'goal' ? '10' : '9'); d.classList.remove('rm-dot-hover'); });
+      if (!showing) show();
+    });
+  });
+
+  // ── Progress ring: animate 0 -> actual % ──
+  const ring = document.getElementById('rm-progress-ring');
+  if (ring) {
+    requestAnimationFrame(() => { ring.style.setProperty('--pct', ring.dataset.targetPct); });
+  }
+
+  // ── Phase bars: animate 0 -> actual width ──
+  document.querySelectorAll('.rm-animate-width').forEach((el, i) => {
+    setTimeout(() => { el.style.width = el.dataset.w + '%'; }, 150 + i * 60);
+  });
+
+  // ── Expandable phases: set initial max-height for whichever phase(s)
+  // start open (the active phase auto-expands), then wire up click toggles.
+  // Days are measured FIRST so the open phase's height calc includes them. ──
+  document.querySelectorAll('.rm-day-block.open .rm-day-body').forEach(setDayBodyOpen);
+  document.querySelectorAll('.rm-phase-item.open .rm-phase-body').forEach(setPhaseBodyOpen);
+
+  const expandAllBtn = document.getElementById('rm-expand-all');
+  if (expandAllBtn) {
+    expandAllBtn.addEventListener('click', function () {
+      const items = document.querySelectorAll('.rm-phase-item');
+      const anyClosed = Array.from(items).some(it => !it.classList.contains('open'));
+      items.forEach(it => {
+        const body = it.querySelector('.rm-phase-body');
+        if (anyClosed) { it.classList.add('open'); setPhaseBodyOpen(body); }
+        else { it.classList.remove('open'); setPhaseBodyClosed(body); }
+      });
+      expandAllBtn.innerHTML = anyClosed
+        ? '<i data-lucide="chevrons-up-down" class="lucide" style="width:14px;height:14px;"></i> Collapse All'
+        : '<i data-lucide="chevrons-down-up" class="lucide" style="width:14px;height:14px;"></i> Expand All';
+      if (window.refreshIcons) window.refreshIcons();
+    });
+  }
+});
+
+function setPhaseBodyOpen(body) {
+  if (!body) return;
+  body.style.maxHeight = body.scrollHeight + 'px';
+}
+function setPhaseBodyClosed(body) {
+  if (!body) return;
+  body.style.maxHeight = '0px';
+}
+
+function rmTogglePhase(headerBtn) {
+  const item = headerBtn.closest('.rm-phase-item');
+  const body = item.querySelector('.rm-phase-body');
+  const opening = !item.classList.contains('open');
+  item.classList.toggle('open', opening);
+  if (opening) setPhaseBodyOpen(body); else setPhaseBodyClosed(body);
+}
+
+function setDayBodyOpen(body) {
+  if (!body) return;
+  body.style.maxHeight = body.scrollHeight + 'px';
+}
+function setDayBodyClosed(body) {
+  if (!body) return;
+  body.style.maxHeight = '0px';
+}
+
+function rmToggleDay(headerBtn) {
+  const dayBlock = headerBtn.closest('.rm-day-block');
+  const body = dayBlock.querySelector('.rm-day-body');
+  const opening = !dayBlock.classList.contains('open');
+  dayBlock.classList.toggle('open', opening);
+  if (opening) setDayBodyOpen(body); else setDayBodyClosed(body);
+
+  // The parent phase's own max-height needs to grow/shrink to match.
+  const phaseItem = headerBtn.closest('.rm-phase-item');
+  const phaseBody = phaseItem ? phaseItem.querySelector('.rm-phase-body') : null;
+  if (phaseBody && phaseItem.classList.contains('open')) {
+    setTimeout(() => { phaseBody.style.maxHeight = phaseBody.scrollHeight + 'px'; }, 310);
+  }
+}
+</script>
+{% endblock %}

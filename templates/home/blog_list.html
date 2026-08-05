@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Blog — EvolveX{% endblock %}
+{% block meta_description %}Articles on productivity, discipline, habit-building, and AI-powered personal growth from the EvolveX team.{% endblock %}
+
+{% block content %}
+<div class="auth-container" style="max-width:840px;">
+  <div class="auth-header">
+    <h1><i data-lucide="pen-square" class="lucide"></i> The EvolveX Blog</h1>
+    <p>Articles on productivity, mindset, discipline, and building an AI-powered life.</p>
+  </div>
+
+  <div class="card glass" style="padding:2rem;text-align:center;margin-bottom:1.6rem;">
+    <div style="width:56px;height:56px;border-radius:50%;background:rgba(139,92,246,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+      <i data-lucide="sparkles" class="lucide" style="width:26px;height:26px;color:var(--accent,#8b5cf6);"></i>
+    </div>
+    <h2 style="margin:0 0 .5rem;">Coming Soon</h2>
+    <p style="color:var(--text-secondary,#9ca3af);max-width:440px;margin:0 auto;">
+      We're writing the first batch of articles now. In the meantime, here's
+      what's on the way.
+    </p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;">
+    <div class="card glass" style="padding:1.4rem;opacity:.75;">
+      <i data-lucide="dumbbell" class="lucide" style="color:var(--accent,#8b5cf6);width:22px;height:22px;"></i>
+      <h4 style="margin:.7rem 0 .3rem;">Discipline &amp; Habits</h4>
+      <p style="font-size:.85rem;color:var(--text-secondary,#9ca3af);margin:0 0 .8rem;">What actually makes a habit stick — and why most streaks fail in week two.</p>
+      <span style="font-size:.68rem;font-weight:700;color:var(--text-secondary,#9ca3af);letter-spacing:.04em;">COMING SOON</span>
+    </div>
+    <div class="card glass" style="padding:1.4rem;opacity:.75;">
+      <i data-lucide="brain-circuit" class="lucide" style="color:var(--accent,#8b5cf6);width:22px;height:22px;"></i>
+      <h4 style="margin:.7rem 0 .3rem;">AI &amp; Personal Growth</h4>
+      <p style="font-size:.85rem;color:var(--text-secondary,#9ca3af);margin:0 0 .8rem;">How AI coaching actually helps (and where it doesn't) — an honest look.</p>
+      <span style="font-size:.68rem;font-weight:700;color:var(--text-secondary,#9ca3af);letter-spacing:.04em;">COMING SOON</span>
+    </div>
+    <div class="card glass" style="padding:1.4rem;opacity:.75;">
+      <i data-lucide="trending-up" class="lucide" style="color:var(--accent,#8b5cf6);width:22px;height:22px;"></i>
+      <h4 style="margin:.7rem 0 .3rem;">Productivity Systems</h4>
+      <p style="font-size:.85rem;color:var(--text-secondary,#9ca3af);margin:0 0 .8rem;">Gamification, deep work, and the systems behind actually getting things done.</p>
+      <span style="font-size:.68rem;font-weight:700;color:var(--text-secondary,#9ca3af);letter-spacing:.04em;">COMING SOON</span>
+    </div>
+    <div class="card glass" style="padding:1.4rem;opacity:.75;">
+      <i data-lucide="heart-pulse" class="lucide" style="color:var(--accent,#8b5cf6);width:22px;height:22px;"></i>
+      <h4 style="margin:.7rem 0 .3rem;">Health &amp; Willpower</h4>
+      <p style="font-size:.85rem;color:var(--text-secondary,#9ca3af);margin:0 0 .8rem;">Diet, energy, and the boring biology behind willpower running out.</p>
+      <span style="font-size:.68rem;font-weight:700;color:var(--text-secondary,#9ca3af);letter-spacing:.04em;">COMING SOON</span>
+    </div>
+  </div>
+
+  <p style="text-align:center;margin-top:1.8rem;color:var(--text-secondary,#9ca3af);font-size:.9rem;">
+    Want to be notified when we publish? <a href="{% url 'contact' %}" style="color:var(--grad-cyan,#22d3ee);">Drop us a line</a>.
+  </p>
+</div>
+{% endblock %}

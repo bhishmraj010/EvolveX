@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Verify Your Email — EvolveX{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+  <div class="auth-header">
+    <h1><i data-lucide="mail-check" class="lucide"></i> Verify Your Email</h1>
+    <p>Enter the code we just sent you to finish setting up your account</p>
+  </div>
+
+  <div class="card glass">
+    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1.1rem;">
+      We sent a 6-digit code to <strong style="color:var(--text-primary);">{{ email }}</strong>.
+      It expires in 10 minutes.
+    </p>
+
+    <form method="post" action="{% url 'verify_otp' %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="id_otp">Verification Code</label>
+        {{ form.otp }}
+        {% if form.otp.errors %}<p class="form-error">{{ form.otp.errors.0 }}</p>{% endif %}
+      </div>
+
+      {% if form.non_field_errors %}
+        <p class="form-error" style="margin-bottom:1rem;">{{ form.non_field_errors.0 }}</p>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary" style="width:100%;">
+        Verify &amp; Create Account
+      </button>
+    </form>
+
+    <form method="post" action="{% url 'resend_otp' %}" style="margin-top:0.9rem;">
+      {% csrf_token %}
+      <button type="submit" style="width:100%;padding:0.6rem;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text-secondary);cursor:pointer;font-size:0.85rem;">
+        Resend Code
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

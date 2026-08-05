@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Subscribed! — EvolveX{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+  <div class="auth-header">
+    <h1><i data-lucide="party-popper" class="lucide"></i> You're All Set!</h1>
+    <p>Your subscription is now active</p>
+  </div>
+
+  <div class="card glass" style="text-align:center;padding:2rem;">
+    <div style="width:56px;height:56px;border-radius:50%;background:rgba(76,255,145,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+      <i data-lucide="check" class="lucide" style="width:28px;height:28px;color:var(--grad-cyan);"></i>
+    </div>
+
+    {% if sub %}
+      <p style="font-size:1.1rem;margin-bottom:0.6rem;">
+        Plan: <strong>{{ sub.get_plan_code_display }}</strong>
+      </p>
+      {% if sub.is_lifetime %}
+        <p style="color:var(--grad-cyan);display:flex;align-items:center;justify-content:center;gap:0.4rem;">
+          <i data-lucide="infinity" class="lucide" style="width:16px;height:16px;"></i>
+          Lifetime access — you'll never be billed again.
+        </p>
+      {% elif sub.expires_at %}
+        <p style="color:var(--text-secondary);">Active until {{ sub.expires_at|date:"F d, Y" }}</p>
+      {% endif %}
+    {% else %}
+      <p style="color:var(--text-secondary);">We couldn't find an active subscription — if you just paid, give it a moment and refresh.</p>
+    {% endif %}
+
+    <a href="{% url 'reports_home' %}" class="btn btn-primary" style="display:inline-block;margin-top:1.2rem;">
+      Go to Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}

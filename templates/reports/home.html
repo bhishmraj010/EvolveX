@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — EvolveX{% endblock %}
+{% block body_class %}theme-obsidian{% endblock %}
+
+{% block extra_head %}
+<style>
+  .rp-head-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.4rem;}
+  .rp-title{font-size:1.7rem;font-weight:800;background:linear-gradient(90deg,var(--accent),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .rp-sub{color:var(--text-secondary);font-size:0.85rem;margin-top:0.2rem;}
+  .rp-range-select{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.5rem 0.9rem;color:var(--text-primary);font-size:0.82rem;}
+  .rp-quote{
+    background:linear-gradient(135deg, rgba(124,58,237,.14), rgba(59,130,246,.06));
+    border:1px solid var(--accent)44;border-radius:14px;padding:0.8rem 1.2rem;font-size:0.85rem;
+    color:var(--text-secondary);font-style:italic;max-width:320px;
+  }
+  .rp-quote b{display:block;color:var(--text-primary);font-style:normal;font-size:0.78rem;margin-top:0.3rem;}
+  .rp-range-toggle{display:flex;gap:0.4rem;}
+  .rp-range-toggle a{
+    padding:0.5rem 0.9rem;border-radius:8px;font-size:0.8rem;text-decoration:none;
+    border:1px solid var(--border);color:var(--text-secondary); transition:all .2s ease;
+  }
+  .rp-range-toggle a:hover{border-color:var(--accent);color:var(--text-primary);}
+  .rp-range-toggle a.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+  /* Stat grid — auto-fit so extra cards (Roadmap XP, Day Status) flow in cleanly at any count */
+  .rp-stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:0.9rem;margin-bottom:1.3rem;}
+
+  .rp-stat{
+    position:relative; overflow:hidden;
+    background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;backdrop-filter:blur(10px);
+    animation:fade-in-up 0.5s ease both; transition:transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+  .rp-stat::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    opacity:0;transition:opacity .3s ease;
+  }
+  .rp-stat:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:0 10px 24px var(--accent-glow);}
+  .rp-stat:hover::before{opacity:1;}
+  .rp-stats-row .rp-stat:nth-child(1){animation-delay:.03s;}
+  .rp-stats-row .rp-stat:nth-child(2){animation-delay:.08s;}
+  .rp-stats-row .rp-stat:nth-child(3){animation-delay:.13s;}
+  .rp-stats-row .rp-stat:nth-child(4){animation-delay:.18s;}
+  .rp-stats-row .rp-stat:nth-child(5){animation-delay:.23s;}
+  .rp-stats-row .rp-stat:nth-child(6){animation-delay:.28s;}
+  .rp-stats-row .rp-stat:nth-child(7){animation-delay:.33s;}
+  .rp-stats-row .rp-stat:nth-child(8){animation-delay:.38s;}
+  .rp-stat .ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:0.6rem;transition:transform .25s ease;}
+  .rp-stat:hover .ic{transform:scale(1.08);}
+  .rp-stat .v{font-size:1.35rem;font-weight:800;color:var(--text-primary);}
+  .rp-stat .l{font-size:0.72rem;color:var(--text-secondary);margin-top:0.1rem;}
+  .rp-stat .delta{font-size:0.7rem;color:var(--green);margin-top:0.3rem;}
+  .rp-ring{display:flex;flex-direction:column;align-items:center;justify-content:center;}
+
+  .rp-row3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:1rem;margin-bottom:1.3rem;}
+  @media (max-width:980px){ .rp-row3{grid-template-columns:1fr;} }
+  .rp-row3b{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:1rem;margin-bottom:1.3rem;}
+  @media (max-width:980px){ .rp-row3b{grid-template-columns:1fr;} }
+  .rp-row2{display:grid;grid-template-columns:1.3fr 1fr;gap:1rem;margin-bottom:1.3rem;}
+  @media (max-width:900px){ .rp-row2{grid-template-columns:1fr;} }
+
+  .rp-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:1.2rem 1.3rem;backdrop-filter:blur(10px);
+    animation:fade-in-up 0.55s ease both; transition:border-color .25s ease, box-shadow .25s ease, transform .25s ease;}
+  .rp-card:hover{border-color:var(--accent)66;box-shadow:0 12px 30px rgba(0,0,0,.35);transform:translateY(-2px);}
+  .rp-card__title{font-size:0.92rem;font-weight:700;color:var(--text-primary);margin-bottom:0.9rem;display:flex;align-items:center;justify-content:space-between;}
+
+  .rp-heat-grid{display:grid;grid-template-columns:auto repeat(7,1fr);gap:4px;font-size:0.68rem;color:var(--text-muted);}
+  .rp-heat-grid .hd{text-align:center;padding-bottom:4px;}
+  .rp-heat-cell{width:100%;aspect-ratio:1;border-radius:4px;background:rgba(255,255,255,0.04);
+    animation:pop-in 0.4s ease both; transition:transform .15s ease;}
+  .rp-heat-cell:hover{transform:scale(1.25);}
+  .rp-heat-row-label{display:flex;align-items:center;font-size:0.68rem;color:var(--text-muted);padding-right:4px;}
+
+  .rp-legend{display:flex;align-items:center;gap:0.4rem;font-size:0.68rem;color:var(--text-muted);margin-top:0.6rem;justify-content:flex-end;flex-wrap:wrap;}
+  .rp-legend .sq{width:10px;height:10px;border-radius:2px;}
+
+  .rp-achv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.9rem;}
+  .rp-achv{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:12px;padding:0.9rem;text-align:center;
+    transition:transform .2s ease,border-color .2s ease; animation:fade-in-up 0.5s ease both;}
+  .rp-achv:hover{transform:translateY(-3px);border-color:var(--accent);}
+  .rp-achv .ic{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent-hover));display:flex;align-items:center;justify-content:center;margin:0 auto 0.6rem;}
+  .rp-achv .t{font-size:0.82rem;font-weight:700;color:var(--text-primary);}
+  .rp-achv .d{font-size:0.68rem;color:var(--text-secondary);margin-top:0.2rem;}
+
+  .rp-insight-bar{display:flex;align-items:center;gap:0.7rem;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:0.8rem 1.2rem;font-size:0.85rem;color:var(--text-secondary);}
+
+  /* Small breakdown rows shared by the two donut cards */
+  .rp-breakdown{display:flex;flex-direction:column;gap:0.4rem;margin-top:0.8rem;text-align:left;font-size:0.78rem;}
+  .rp-breakdown div{display:flex;justify-content:space-between;}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="rp-head-row">
+  <div>
+    <div class="rp-title">Dashboard</div>
+    <div class="rp-sub">Overview of your journey and progress.</div>
+    <select class="rp-range-select" style="margin-top:0.8rem;" onchange="window.location='?range='+this.value">
+      {% for val, label in range_options %}
+        <option value="{{ val }}" {% if val == days %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="rp-quote">
+    <i data-lucide="sparkle" class="lucide" style="color:var(--accent);"></i>
+    "Discipline today, freedom tomorrow."
+    <b>— EvolveX</b>
+  </div>
+  <div class="rp-range-toggle">
+    {% for val, label in range_options %}
+      <a href="?range={{ val }}" class="{% if val == days %}active{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ── Stat cards ── -->
+<div class="rp-stats-row">
+  <div class="rp-stat">
+    <div class="ic" style="background:rgba(59,130,246,.15);"><i data-lucide="zap" class="lucide" style="color:var(--blue);width:18px;height:18px;"></i></div>
+    <div class="v">{{ user_xp }}</div>
+    <div class="l">Total XP</div>
+  </div>
+  <div class="rp-stat">
+    <div class="ic" style="background:rgba(16,185,129,.15);"><i data-lucide="check-circle" class="lucide" style="color:var(--green);width:18px;height:18px;"></i></div>
+    <div class="v">{{ total_task_pts }}</div>
+    <div class="l">Task XP</div>
+  </div>
+  <div class="rp-stat">
+    <div class="ic" style="background:rgba(245,158,11,.15);"><i data-lucide="flame" class="lucide" style="color:var(--gold);width:18px;height:18px;"></i></div>
+    <div class="v">{{ total_wp_pts }}</div>
+    <div class="l">Willpower XP</div>
+  </div>
+  <div class="rp-stat">
+    <div class="ic" style="background:rgba(236,72,153,.15);"><i data-lucide="apple" class="lucide" style="color:var(--pink);width:18px;height:18px;"></i></div>
+    <div class="v">{{ total_diet_pts }}</div>
+    <div class="l">Diet XP</div>
+  </div>
+  <!-- Roadmap XP — backend needs to pass `roadmap_xp` in context -->
+  <div class="rp-stat">
+    <div class="ic" style="background:rgba(34,211,238,.15);"><i data-lucide="map" class="lucide" style="color:var(--cyan);width:18px;height:18px;"></i></div>
+    <div class="v">{{ roadmap_xp }}</div>
+    <div class="l">Roadmap XP</div>
+  </div>
+  <!-- NEW: Day Status — backend needs to pass `today_status` in context ('win' / 'survive' / 'lose') -->
+  <div class="rp-stat">
+    <div class="ic" style="background:{% if today_status == 'win' %}rgba(16,185,129,.15){% elif today_status == 'survive' %}rgba(245,158,11,.15){% else %}rgba(239,68,68,.15){% endif %};">
+      {% if today_status == 'win' %}
+        <i data-lucide="trophy" class="lucide" style="color:var(--green);width:18px;height:18px;"></i>
+      {% elif today_status == 'survive' %}
+        <i data-lucide="shield" class="lucide" style="color:var(--gold);width:18px;height:18px;"></i>
+      {% else %}
+        <i data-lucide="skull" class="lucide" style="color:var(--red);width:18px;height:18px;"></i>
+      {% endif %}
+    </div>
+    <div class="v" style="text-transform:uppercase;">{{ today_status|default:"—" }}</div>
+    <div class="l">Day Status</div>
+  </div>
+  <div class="rp-stat">
+    <div class="ic" style="background:rgba(124,58,237,.15);"><i data-lucide="star" class="lucide" style="color:var(--accent);width:18px;height:18px;"></i></div>
+    <div class="v">{{ win_days }}</div>
+    <div class="l">Win Days</div>
+  </div>
+  <div class="rp-stat rp-ring">
+    <canvas id="avgRing" width="70" height="70"></canvas>
+    <div class="l" style="margin-top:0.3rem;">Avg XP / Day: <b style="color:var(--text-primary);">{{ avg_pts }}</b></div>
+  </div>
+</div>
+
+<!-- ── XP Trend / Day Results / XP Distribution ── -->
+<div class="rp-row3">
+  <div class="rp-card">
+    <div class="rp-card__title">XP Trend</div>
+    <div style="position:relative;height:230px;"><canvas id="pointsTrendChart"></canvas></div>
+  </div>
+  <div class="rp-card" style="text-align:center;">
+    <div class="rp-card__title" style="justify-content:center;">Day Results</div>
+    <div style="position:relative;height:150px;"><canvas id="dayResultsChart"></canvas></div>
+    <div class="rp-breakdown">
+      <div><span style="color:var(--green);">● Win</span><span>{{ win_days }} ({{ win_pct }}%)</span></div>
+      <div><span style="color:var(--gold);">● Survive</span><span>{{ survive_days }} ({{ survive_pct }}%)</span></div>
+      <div><span style="color:var(--red);">● Lose</span><span>{{ lose_days }} ({{ lose_pct }}%)</span></div>
+    </div>
+  </div>
+  <div class="rp-card">
+    <div class="rp-card__title">XP Distribution</div>
+    <div style="position:relative;height:210px;"><canvas id="radarChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ── Activity Heatmap / XP by Source / Weekly Consistency ── -->
+<div class="rp-row3b">
+  <div class="rp-card">
+    <div class="rp-card__title">Activity Heatmap</div>
+    <div class="rp-heat-grid">
+      <div></div>
+      {% for d in "MTWTFSS" %}<div class="hd">{{ d }}</div>{% endfor %}
+      {% for week in heatmap_weeks %}
+        <div class="rp-heat-row-label">W{{ forloop.counter }}</div>
+        {% for v in week %}
+          <div class="rp-heat-cell" style="animation-delay:{{ forloop.parentloop.counter0|add:forloop.counter0|floatformat:0 }}0ms;
+            {% if v == 4 %}background:var(--accent);
+            {% elif v == 2 %}background:var(--accent-glow);
+            {% elif v == 1 %}background:rgba(239,68,68,.35);
+            {% endif %}"></div>
+        {% endfor %}
+      {% endfor %}
+    </div>
+    <div class="rp-legend">
+      Low <span class="sq" style="background:rgba(255,255,255,.04);"></span>
+      <span class="sq" style="background:rgba(239,68,68,.35);"></span>
+      <span class="sq" style="background:var(--accent-glow);"></span>
+      <span class="sq" style="background:var(--accent);"></span> High
+    </div>
+  </div>
+  <div class="rp-card" style="text-align:center;">
+    <div class="rp-card__title" style="justify-content:center;">XP by Source</div>
+    <div style="position:relative;height:150px;"><canvas id="sourceChart"></canvas></div>
+    <div class="rp-breakdown">
+      <div><span style="color:var(--blue);">● Tasks</span><span>{{ source_breakdown.tasks.pct }}% ({{ source_breakdown.tasks.value }})</span></div>
+      <div><span style="color:var(--gold);">● Willpower</span><span>{{ source_breakdown.willpower.pct }}% ({{ source_breakdown.willpower.value }})</span></div>
+      <div><span style="color:var(--pink);">● Diet</span><span>{{ source_breakdown.diet.pct }}% ({{ source_breakdown.diet.value }})</span></div>
+      <div><span style="color:var(--cyan);">● Roadmap</span><span>{{ source_breakdown.roadmap.pct }}% ({{ source_breakdown.roadmap.value }})</span></div>
+    </div>
+  </div>
+  <div class="rp-card">
+    <div class="rp-card__title">Weekly Consistency</div>
+    <div style="position:relative;height:200px;"><canvas id="weeklyBarChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ── Streak History / Achievements ── -->
+<div class="rp-row2">
+  <div class="rp-card">
+    <div class="rp-card__title">
+      Streak History
+      <span style="color:var(--accent);font-size:0.78rem;">Best: {{ max_streak }} Days</span>
+    </div>
+    <div style="position:relative;height:200px;"><canvas id="streakChart"></canvas></div>
+  </div>
+  <div class="rp-card">
+    <div class="rp-card__title">Achievements Unlocked</div>
+    {% if achievements %}
+    <div class="rp-achv-grid">
+      {% for a in achievements %}
+      <div class="rp-achv">
+        <div class="ic"><i data-lucide="{{ a.icon }}" class="lucide" style="color:#fff;width:20px;height:20px;"></i></div>
+        <div class="t">{{ a.title }}</div>
+        <div class="d">{{ a.desc }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:var(--text-secondary);font-size:0.85rem;">Keep going — your first achievement is closer than you think.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="rp-insight-bar">
+  <i data-lucide="lightbulb" class="lucide" style="color:var(--accent);"></i>
+  Insights are based on your activity. Keep going, you're doing great!
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+Chart.defaults.color       = '#9ca3af';
+Chart.defaults.borderColor = '#1f2937';
+Chart.defaults.font.family = "'Inter', 'Segoe UI', system-ui, sans-serif";
+Chart.defaults.animation.duration = 900;
+Chart.defaults.animation.easing = 'easeOutQuart';
+
+// Count-up animation for the stat card numbers (Day Status is text, so it's skipped automatically)
+document.querySelectorAll('.rp-stat .v').forEach(el => {
+  const target = parseFloat(el.textContent.replace(/,/g, ''));
+  if (isNaN(target)) return;
+  const duration = 800, start = performance.now();
+  function tick(now) {
+    const p = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(target * eased).toLocaleString();
+    if (p < 1) requestAnimationFrame(tick);
+    else el.textContent = target.toLocaleString();
+  }
+  requestAnimationFrame(tick);
+});
+
+const dateLabels  = {{ date_labels|safe }};
+const cumulXP     = {{ cumulative_xp|safe }};
+const taskPts     = {{ task_pts|safe }};
+const wpPts       = {{ wp_pts|safe }};
+const dietPts     = {{ diet_pts|safe }};
+const roadmapPts  = {{ roadmap_pts|default:"[]"|safe }};
+const donutData   = {{ donut_data|safe }};
+const radar       = {{ radar_scores_json|safe }};
+const sourceData  = [{{ source_breakdown.tasks.value }}, {{ source_breakdown.willpower.value }}, {{ source_breakdown.diet.value }}, {{ source_breakdown.roadmap.value|default:0 }}];
+const weeklyCons  = {{ weekly_consistency_json|safe }};
+const streakData  = {{ streak_data|safe }};
+
+// Avg XP/Day mini ring
+new Chart(document.getElementById('avgRing'), {
+  type: 'doughnut',
+  data: { datasets: [{ data: [{{ avg_pts }}, Math.max(0, 150 - {{ avg_pts }})], backgroundColor: ['#7c3aed', 'rgba(255,255,255,.06)'], borderWidth: 0 }] },
+  options: { cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: false } } },
+});
+
+// XP Trend — multi-line, includes Roadmap XP as a 4th series
+new Chart(document.getElementById('pointsTrendChart'), {
+  type: 'line',
+  data: {
+    labels: dateLabels,
+    datasets: [
+      { label: 'Total XP', data: cumulXP, borderColor: '#3b82f6', backgroundColor: '#3b82f622', borderWidth: 2.5, pointRadius: 0, fill: true, tension: 0.4 },
+      { label: 'Task XP', data: taskPts, borderColor: '#10b981', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4 },
+      { label: 'Willpower', data: wpPts, borderColor: '#f59e0b', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4 },
+      { label: 'Diet XP', data: dietPts, borderColor: '#ec4899', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4 },
+      { label: 'Roadmap XP', data: roadmapPts, borderColor: '#22d3ee', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.4 },
+    ],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } } },
+    scales: { x: { ticks: { maxTicksLimit: 8, maxRotation: 0 } }, y: { beginAtZero: true } },
+  },
+});
+
+// Day Results donut
+new Chart(document.getElementById('dayResultsChart'), {
+  type: 'doughnut',
+  data: { datasets: [{ data: donutData, backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], borderWidth: 0 }] },
+  options: {
+    cutout: '68%', responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+  },
+});
+
+// XP Distribution radar — includes Roadmap as a 6th axis
+new Chart(document.getElementById('radarChart'), {
+  type: 'radar',
+  data: {
+    labels: ['Task XP', 'Willpower', 'Diet XP', 'Roadmap', 'Focus', 'Consistency'],
+    datasets: [{
+      data: [radar.task_points, radar.willpower, radar.diet_points, radar.roadmap, radar.focus, radar.consistency],
+      backgroundColor: '#7c3aed33', borderColor: '#7c3aed', borderWidth: 2, pointBackgroundColor: '#7c3aed',
+    }],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { r: { beginAtZero: true, max: 100, ticks: { display: false }, grid: { color: '#1f2937' }, angleLines: { color: '#1f2937' } } },
+  },
+});
+
+// XP by Source donut — 4 slices (Tasks / Willpower / Diet / Roadmap)
+new Chart(document.getElementById('sourceChart'), {
+  type: 'doughnut',
+  data: { datasets: [{ data: sourceData, backgroundColor: ['#3b82f6', '#f59e0b', '#ec4899', '#22d3ee'], borderWidth: 0 }] },
+  options: { cutout: '68%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+});
+
+// Weekly Consistency bars
+new Chart(document.getElementById('weeklyBarChart'), {
+  type: 'bar',
+  data: {
+    labels: weeklyCons.map((_, i) => 'Week ' + (i + 1)),
+    datasets: [{ data: weeklyCons, backgroundColor: '#7c3aed', borderRadius: 6, maxBarThickness: 34 }],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, max: 100 } },
+  },
+});
+
+// Streak History
+new Chart(document.getElementById('streakChart'), {
+  type: 'line',
+  data: {
+    labels: dateLabels,
+    datasets: [{ data: streakData, borderColor: '#7c3aed', backgroundColor: '#7c3aed22', borderWidth: 2.5, pointRadius: 2, fill: true, tension: 0.4 }],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { ticks: { maxTicksLimit: 8, maxRotation: 0 } }, y: { beginAtZero: true } },
+  },
+});
+</script>
+{% endblock %}

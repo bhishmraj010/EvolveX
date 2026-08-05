@@ -1,0 +1,492 @@
+{% extends 'base.html' %}
+{% block title %}Willpower Tracker — EvolveX{% endblock %}
+{% block body_class %}theme-midnight{% endblock %}
+
+{% block extra_head %}
+<style>
+  .wp-head-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.3rem;animation:fade-in-up .4s ease both;}
+  .wp-title{font-size:1.5rem;font-weight:800;color:var(--text-primary);}
+  .wp-sub{color:var(--text-secondary);font-size:0.85rem;margin-top:0.2rem;}
+
+  .wp-layout{display:grid;grid-template-columns:2.2fr 1fr;gap:1.2rem;}
+  @media (max-width:980px){ .wp-layout{grid-template-columns:1fr;} }
+
+  .wp-stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:0.9rem;margin-bottom:1.2rem;}
+  @media (max-width:900px){ .wp-stats-row{grid-template-columns:repeat(2,1fr);} }
+  .wp-stat{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;backdrop-filter:blur(10px);
+    animation:fade-in-up .5s ease both; transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease;}
+  .wp-stat:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:0 10px 24px var(--accent-glow);}
+  .wp-stats-row .wp-stat:nth-child(1){animation-delay:.03s;} .wp-stats-row .wp-stat:nth-child(2){animation-delay:.08s;}
+  .wp-stats-row .wp-stat:nth-child(3){animation-delay:.13s;} .wp-stats-row .wp-stat:nth-child(4){animation-delay:.18s;}
+  .wp-stats-row .wp-stat:nth-child(5){animation-delay:.23s;}
+  .wp-stat .ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:0.5rem;}
+  .wp-stat .lbl{font-size:0.68rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;}
+  .wp-stat .v{font-size:1.3rem;font-weight:800;color:var(--text-primary);margin-top:0.1rem;}
+  .wp-stat .d{font-size:0.68rem;color:var(--text-muted);margin-top:0.1rem;}
+  .wp-stat .mini-track{height:4px;border-radius:4px;background:rgba(255,255,255,.06);margin-top:0.5rem;overflow:hidden;}
+  .wp-stat .mini-fill{height:100%;border-radius:4px;background:var(--blue);transition:width .8s ease;}
+
+  .wp-info{display:flex;align-items:center;gap:0.6rem;background:linear-gradient(90deg, rgba(59,130,246,.1), rgba(124,58,237,.06));
+    border:1px solid var(--blue)44;border-radius:12px;padding:0.8rem 1.1rem;margin-bottom:1.2rem;font-size:0.85rem;color:var(--text-secondary);
+    animation:fade-in-up .5s ease both;flex-wrap:wrap;}
+
+  .wp-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:1.2rem 1.3rem;backdrop-filter:blur(10px);
+    animation:fade-in-up .55s ease both;margin-bottom:1.2rem;}
+  .wp-card__title{font-size:0.95rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+
+  .wp-empty{text-align:center;padding:2.2rem 1rem;color:var(--text-secondary);}
+  .wp-empty .ic{width:44px;height:44px;color:var(--text-muted);margin:0 auto 0.6rem;display:block;}
+
+  .wp-side-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:1.1rem 1.2rem;backdrop-filter:blur(10px);
+    margin-bottom:1.1rem;animation:fade-in-up .6s ease both;}
+  .wp-side-card__title{font-size:0.85rem;font-weight:700;color:var(--text-primary);margin-bottom:0.9rem;}
+
+  .wp-week-dots{display:flex;justify-content:space-between;align-items:center;}
+  .wp-week-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:0.65rem;color:var(--text-muted);border:1px solid var(--border);}
+  .wp-week-dot.active{background:var(--green);color:#fff;border-color:var(--green);}
+  .wp-week-dot.today{border-color:var(--accent);color:var(--accent);font-weight:700;}
+  .wp-week-col{display:flex;flex-direction:column;align-items:center;gap:0.35rem;font-size:0.65rem;color:var(--text-muted);}
+
+  .wp-streak-ring-wrap{display:flex;flex-direction:column;align-items:center;}
+  .wp-quick-action{display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.2rem;color:var(--text-secondary);font-size:0.85rem;text-decoration:none;
+    transition:color .2s ease;}
+  .wp-quick-action:hover{color:var(--accent);}
+
+  .wp-insight{background:linear-gradient(135deg, rgba(124,58,237,.14), rgba(59,130,246,.06));border:1px solid var(--accent)44;
+    border-radius:14px;padding:1.1rem 1.3rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;
+    animation:fade-in-up .65s ease both;}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="wp-head-row">
+  <div>
+    <div class="wp-title">Good {% now "H" as curhour %}{% if curhour|add:0 < 12 %}morning{% elif curhour|add:0 < 18 %}afternoon{% else %}evening{% endif %}, {{ user.get_display_name }}!</div>
+    <div class="wp-sub">Strengthen your willpower. Build the life you want.</div>
+  </div>
+</div>
+
+<!-- ── Date Navigation ── -->
+<div class="date-nav" style="margin-bottom:1.2rem;">
+  <a href="/tracker/willpower/?date={{ prev_date }}" class="date-arrow">‹</a>
+  <div class="date-center">
+    <span class="date-label">{% if is_today %}Today{% else %}{{ selected_date|date:"l" }}{% endif %}</span>
+    <span class="date-value">{{ selected_date|date:"d M Y" }}</span>
+    <input type="date" id="date-picker" value="{{ selected_date|date:'Y-m-d' }}"
+      max="{{ today|date:'Y-m-d' }}"
+      onchange="window.location='/tracker/willpower/?date='+this.value"
+      class="date-picker-input" />
+  </div>
+  <a href="/tracker/willpower/?date={{ next_date }}" class="date-arrow">›</a>
+</div>
+
+<div class="wp-layout">
+  <!-- ═══ MAIN COLUMN ═══ -->
+  <div>
+    <!-- ── Stats ── -->
+    <div class="wp-stats-row">
+      <div class="wp-stat">
+        <div class="ic" style="background:rgba(59,130,246,.15);"><i data-lucide="zap" class="lucide" style="color:var(--blue);width:16px;height:16px;"></i></div>
+        <div class="lbl">WP XP Today</div>
+        <div class="v" id="wp-points-value" style="color:{% if wp_points > 0 %}var(--win-color){% elif wp_points < 0 %}var(--lose-color){% else %}var(--text-secondary){% endif %};">
+          {% if wp_points > 0 %}+{% endif %}{{ wp_points }}
+        </div>
+        <div class="d">Today's Earned</div>
+        <div class="mini-track"><div class="mini-fill" style="width:{{ wp_points|default:0 }}%;"></div></div>
+      </div>
+      <div class="wp-stat">
+        <div class="ic" style="background:rgba(16,185,129,.15);"><i data-lucide="check-circle-2" class="lucide" style="color:var(--green);width:16px;height:16px;"></i></div>
+        <div class="lbl">Completed</div>
+        <div class="v" style="color:var(--win-color);" id="wp-completed-count">{{ completed.count }}</div>
+        <div class="d">Challenges Done</div>
+      </div>
+      <div class="wp-stat">
+        <div class="ic" style="background:rgba(239,68,68,.15);"><i data-lucide="x-circle" class="lucide" style="color:var(--red);width:16px;height:16px;"></i></div>
+        <div class="lbl">Skipped</div>
+        <div class="v" style="color:var(--lose-color);" id="wp-skipped-count">{{ skipped.count }}</div>
+        <div class="d">Challenges Skipped</div>
+      </div>
+      <div class="wp-stat">
+        <div class="ic" style="background:rgba(124,58,237,.15);"><i data-lucide="star" class="lucide" style="color:var(--accent);width:16px;height:16px;"></i></div>
+        <div class="lbl">Total</div>
+        <div class="v" style="color:var(--accent);" id="wp-total-count">{{ tasks.count }}</div>
+        <div class="d">Total Challenges</div>
+      </div>
+      <div class="wp-stat">
+        <div class="ic" style="background:rgba(245,158,11,.15);"><i data-lucide="flame" class="lucide" style="color:var(--gold);width:16px;height:16px;"></i></div>
+        <div class="lbl">Streak</div>
+        <div class="v" style="color:var(--gold);">{{ current_streak }} days</div>
+        <div class="d">Keep it going!</div>
+      </div>
+    </div>
+
+    <div class="wp-info">
+      <i data-lucide="zap" class="lucide" style="color:var(--blue);"></i>
+      <strong style="color:var(--text-primary);">Willpower Challenges</strong> — Complete = <strong style="color:var(--win-color);">+7 XP</strong> &nbsp;|&nbsp;
+      Skip = <strong style="color:var(--lose-color);">−7 XP</strong> &nbsp;|&nbsp; Synced to daily total!
+    </div>
+
+    <!-- ── Task Table ── -->
+    <div class="wp-card" style="margin-bottom:1.2rem;">
+      <div class="wp-card__title">
+        <span style="display:flex;align-items:center;gap:0.5rem;"><i data-lucide="zap" class="lucide"></i> Today's Willpower Challenges</span>
+        <span style="font-size:0.78rem;color:var(--text-secondary);font-weight:400;">{{ selected_date|date:"d M Y" }}</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="task-table">
+          <thead>
+            <tr>
+              <th style="width:50%">Challenge</th>
+              <th style="width:12%; text-align:center;">XP</th>
+              <th style="width:13%; text-align:center;">Status</th>
+              <th style="width:25%; text-align:center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="wp-tbody">
+
+            <tr class="add-row" id="wp-add-row">
+              <td><input type="text" id="new-wp-title"
+                placeholder="Add challenge... (No sugar, No porn, Limited screen time)"
+                class="table-input" /></td>
+              <td style="text-align:center;"><span class="pts-badge pts-positive">+7</span></td>
+              <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
+              <td style="text-align:center;">
+                <button type="button" class="btn" id="add-wp-btn" style="padding:0.35rem 1.1rem; font-size:0.85rem;display:inline-flex;align-items:center;gap:0.3rem;">
+                  <i data-lucide="plus" class="lucide" style="width:1em;height:1em;"></i> Add
+                </button>
+              </td>
+            </tr>
+
+            {% for task in pending %}
+            <tr class="task-row" id="wptask-{{ task.id }}">
+              <td class="task-name">{{ task.title }}</td>
+              <td style="text-align:center;"><span class="pts-badge pts-positive">+7</span></td>
+              <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
+              <td style="text-align:center;">
+                <div class="task-action-circles">
+                  <button class="task-circle task-circle--done" onclick="doWpTask({{ task.id }}, 'complete')" title="Mark done" aria-label="Mark done"><i data-lucide="check" class="lucide" style="width:1em;height:1em;"></i></button>
+                  <button class="task-circle task-circle--skip" onclick="doWpTask({{ task.id }}, 'skip')" title="Skip" aria-label="Skip"><i data-lucide="x" class="lucide" style="width:1em;height:1em;"></i></button>
+                  <a href="{% url 'delete_wp_task' task.id %}" class="task-circle task-circle--del"
+                    onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="lucide" style="width:1em;height:1em;"></i></a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+
+            {% for task in completed %}
+            <tr class="task-row task-done-row" id="wptask-{{ task.id }}">
+              <td class="task-name" style="text-decoration:line-through; opacity:0.5;">{{ task.title }}</td>
+              <td style="text-align:center;"><span class="pts-badge" style="background:#10b98122;color:var(--win-color);">+7</span></td>
+              <td style="text-align:center;"><span class="status-badge badge-done"><i data-lucide="check" class="lucide" style="width:1em;height:1em;"></i> Done</span></td>
+              <td style="text-align:center;"><button class="task-circle task-circle--undo" onclick="undoWpTask({{ task.id }})" title="Undo" aria-label="Undo"><i data-lucide="undo-2" class="lucide" style="width:1em;height:1em;"></i></button></td>
+            </tr>
+            {% endfor %}
+
+            {% for task in skipped %}
+            <tr class="task-row task-skip-row" id="wptask-{{ task.id }}">
+              <td class="task-name" style="opacity:0.4;">{{ task.title }}</td>
+              <td style="text-align:center;"><span class="pts-badge pts-negative">−7</span></td>
+              <td style="text-align:center;"><span class="status-badge badge-skip"><i data-lucide="skip-forward" class="lucide" style="width:1em;height:1em;"></i> Skipped</span></td>
+              <td style="text-align:center;"><button class="task-circle task-circle--undo" onclick="undoWpTask({{ task.id }})" title="Undo" aria-label="Undo"><i data-lucide="undo-2" class="lucide" style="width:1em;height:1em;"></i></button></td>
+            </tr>
+            {% endfor %}
+
+            {% if not tasks %}
+            <tr id="wp-empty-row">
+              <td colspan="4">
+                <div class="wp-empty">
+                  <i data-lucide="clipboard-list" class="lucide wp-empty-ic" style="width:44px;height:44px;color:var(--text-muted);margin:0 auto 0.6rem;display:block;"></i>
+                  No challenges for today.<br>
+                  <span style="font-size:0.8rem;">Add one above and start building your willpower!</span>
+                </div>
+              </td>
+            </tr>
+            {% endif %}
+
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── AI Insight ── -->
+    <div class="wp-insight">
+      <div style="display:flex;gap:0.7rem;align-items:flex-start;">
+        <i data-lucide="sparkles" class="lucide" style="color:var(--accent);"></i>
+        <div>
+          <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);font-weight:700;">AI Insight</div>
+          <div style="color:var(--text-primary);font-weight:600;font-size:0.9rem;margin-top:0.2rem;">{{ ai_insight_title }}</div>
+          <div style="color:var(--text-secondary);font-size:0.82rem;margin-top:0.1rem;">{{ ai_insight_body }}</div>
+        </div>
+      </div>
+      <a href="{% url 'analyzer_home' %}" class="btn" style="text-decoration:none;white-space:nowrap;display:flex;align-items:center;gap:0.4rem;">
+        <i data-lucide="sparkles" class="lucide"></i> Get More Insights
+      </a>
+    </div>
+  </div>
+
+  <!-- ═══ SIDE COLUMN ═══ -->
+  <div>
+    <div class="wp-side-card">
+      <div class="wp-side-card__title">Weekly Summary</div>
+      <div class="wp-week-dots">
+        {% for d in weekly_summary %}
+        <div class="wp-week-col">
+          {{ d.label }}
+          <div class="wp-week-dot {% if d.active %}active{% endif %} {% if d.is_today %}today{% endif %}">
+            {% if d.active %}<i data-lucide="check" class="lucide" style="width:12px;height:12px;"></i>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="wp-side-card" style="text-align:center;">
+      <div class="wp-side-card__title" style="text-align:left;">Current Streak</div>
+      <div class="wp-streak-ring-wrap">
+        <div style="position:relative;width:100px;height:100px;">
+          <svg width="100" height="100" viewBox="0 0 100 100" style="transform:rotate(-90deg);">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="7"></circle>
+            <circle cx="50" cy="50" r="42" fill="none" stroke="url(#streakGrad)" stroke-width="7" stroke-linecap="round"
+              stroke-dasharray="263.9" stroke-dashoffset="263.9" id="streakRingProgress"></circle>
+            <defs>
+              <linearGradient id="streakGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="var(--gold)"></stop>
+                <stop offset="100%" stop-color="#f97316"></stop>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <i data-lucide="flame" class="lucide" style="color:var(--gold);width:20px;height:20px;"></i>
+            <div style="font-size:0.95rem;font-weight:800;color:var(--text-primary);margin-top:0.15rem;">{{ current_streak }} days</div>
+          </div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.6rem;">Best: {{ best_streak }} days</div>
+      </div>
+    </div>
+
+    <div class="wp-side-card" style="text-align:center;">
+      <div class="wp-side-card__title" style="text-align:left;">XP This Week</div>
+      <div style="position:relative;width:110px;height:110px;margin:0 auto;">
+        <canvas id="weekPointsRing" width="110" height="110"></canvas>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <div style="font-size:1.3rem;font-weight:800;color:var(--text-primary);">{{ week_net }}</div>
+          <div style="font-size:0.65rem;color:var(--text-secondary);">Total XP</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.4rem;margin-top:0.9rem;text-align:left;font-size:0.78rem;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--green);">● Earned</span><span>{{ week_earned }}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--red);">● Skipped</span><span>{{ week_skipped }}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--blue);">● Net</span><span>{{ week_net }}</span></div>
+      </div>
+    </div>
+
+    <div class="wp-side-card">
+      <div class="wp-side-card__title">Quick Actions</div>
+      <a href="{% url 'reports_home' %}" class="wp-quick-action"><i data-lucide="bar-chart-2" class="lucide"></i> View Reports</a>
+      <a href="{% url 'analyzer_home' %}" class="wp-quick-action"><i data-lucide="sparkles" class="lucide"></i> AI Insights</a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const csrfToken = '{{ csrf_token }}';
+const WP_ADD_URL = "{% url 'willpower' %}";
+const WP_SELECTED_DATE = "{{ selected_date|date:'Y-m-d' }}";
+
+async function submitNewWpTask() {
+  const titleInput = document.getElementById('new-wp-title');
+  const addBtn      = document.getElementById('add-wp-btn');
+  const title = titleInput.value.trim();
+  if (!title) { titleInput.focus(); return; }
+
+  addBtn.disabled = true;
+
+  const body = new URLSearchParams();
+  body.set('action', 'add');
+  body.set('title', title);
+  body.set('selected_date', WP_SELECTED_DATE);
+
+  try {
+    const res = await fetch(WP_ADD_URL, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    });
+    const data = await res.json();
+
+    if (!data.ok) {
+      alert(data.error || 'Could not add challenge.');
+      addBtn.disabled = false;
+      return;
+    }
+
+    const emptyRow = document.getElementById('wp-empty-row');
+    if (emptyRow) emptyRow.remove();
+
+    const tr = document.createElement('tr');
+    tr.className = 'task-row';
+    tr.id = `wptask-${data.task_id}`;
+    tr.style.opacity = '0';
+    tr.innerHTML = `
+      <td class="task-name">${data.title}</td>
+      <td style="text-align:center;"><span class="pts-badge pts-positive">+7</span></td>
+      <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
+      <td style="text-align:center;">
+        <div class="task-action-circles">
+          <button class="task-circle task-circle--done" onclick="doWpTask(${data.task_id}, 'complete')" title="Mark done" aria-label="Mark done"><i data-lucide="check" class="lucide" style="width:1em;height:1em;"></i></button>
+          <button class="task-circle task-circle--skip" onclick="doWpTask(${data.task_id}, 'skip')" title="Skip" aria-label="Skip"><i data-lucide="x" class="lucide" style="width:1em;height:1em;"></i></button>
+          <a href="/tracker/willpower/delete/${data.task_id}/" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="lucide" style="width:1em;height:1em;"></i></a>
+        </div>
+      </td>
+    `;
+    document.getElementById('wp-add-row').after(tr);
+    requestAnimationFrame(() => { tr.style.transition = 'opacity 0.25s ease'; tr.style.opacity = '1'; });
+
+    titleInput.value = '';
+    titleInput.focus();
+
+    updateWpStats(data);
+    if (window.refreshIcons) window.refreshIcons();
+
+  } catch (err) {
+    alert('Something went wrong adding the challenge.');
+  } finally {
+    addBtn.disabled = false;
+  }
+}
+
+function updateWpStats(data) {
+  const wpPointsEl = document.getElementById('wp-points-value');
+  wpPointsEl.textContent = (data.wp_points > 0 ? '+' : '') + data.wp_points;
+  wpPointsEl.style.color = data.wp_points > 0 ? 'var(--win-color)' : data.wp_points < 0 ? 'var(--lose-color)' : 'var(--text-secondary)';
+  document.getElementById('wp-completed-count').textContent = data.completed_count;
+  document.getElementById('wp-skipped-count').textContent   = data.skipped_count;
+  document.getElementById('wp-total-count').textContent     = data.total_count;
+}
+
+async function doWpTask(taskId, action) {
+  const url = action === 'complete'
+    ? `/tracker/willpower/complete/${taskId}/`
+    : `/tracker/willpower/skip/${taskId}/`;
+
+  const res  = await fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+  });
+  const data = await res.json();
+  if (!data.ok) return;
+
+  const row = document.getElementById(`wptask-${taskId}`);
+  if (row) {
+    const isDone = action === 'complete';
+    row.classList.add(isDone ? 'task-done-row' : 'task-skip-row');
+
+    const nameCell = row.children[0];
+    if (nameCell) {
+      nameCell.style.textDecoration = isDone ? 'line-through' : 'none';
+      nameCell.style.opacity = isDone ? '0.5' : '0.4';
+    }
+    const ptsCell = row.children[1];
+    if (ptsCell) ptsCell.innerHTML = isDone
+      ? '<span class="pts-badge" style="background:#10b98122;color:var(--win-color);">+7</span>'
+      : '<span class="pts-badge pts-negative">−7</span>';
+
+    const statusCell = row.children[2];
+    if (statusCell) statusCell.innerHTML = isDone
+      ? '<span class="status-badge badge-done"><i data-lucide="check" class="lucide" style="width:1em;height:1em;"></i> Done</span>'
+      : '<span class="status-badge badge-skip"><i data-lucide="skip-forward" class="lucide" style="width:1em;height:1em;"></i> Skipped</span>';
+
+    const actionCell = row.children[3];
+    if (actionCell) actionCell.innerHTML =
+      `<button class="task-circle task-circle--undo" onclick="undoWpTask(${taskId})" title="Undo" aria-label="Undo"><i data-lucide="undo-2" class="lucide" style="width:1em;height:1em;"></i></button>`;
+
+    if (window.refreshIcons) window.refreshIcons();
+  }
+
+  updateWpStats(data);
+}
+
+async function undoWpTask(taskId) {
+  const res = await fetch(`/tracker/willpower/undo/${taskId}/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+  });
+  const data = await res.json();
+  if (!data.ok) return;
+
+  const row = document.getElementById(`wptask-${taskId}`);
+  if (row) {
+    row.classList.remove('task-done-row', 'task-skip-row');
+    const nameCell = row.children[0];
+    if (nameCell) {
+      nameCell.style.textDecoration = 'none';
+      nameCell.style.opacity = '1';
+    }
+    const ptsCell = row.children[1];
+    if (ptsCell) ptsCell.innerHTML = '<span class="pts-badge pts-positive">+7</span>';
+    const statusCell = row.children[2];
+    if (statusCell) statusCell.innerHTML = '<span class="status-badge badge-pending">Pending</span>';
+    const actionCell = row.children[3];
+    if (actionCell) actionCell.innerHTML = `
+      <div class="task-action-circles">
+        <button class="task-circle task-circle--done" onclick="doWpTask(${taskId}, 'complete')" title="Mark done" aria-label="Mark done"><i data-lucide="check" class="lucide" style="width:1em;height:1em;"></i></button>
+        <button class="task-circle task-circle--skip" onclick="doWpTask(${taskId}, 'skip')" title="Skip" aria-label="Skip"><i data-lucide="x" class="lucide" style="width:1em;height:1em;"></i></button>
+        <a href="/tracker/willpower/delete/${taskId}/" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="lucide" style="width:1em;height:1em;"></i></a>
+      </div>`;
+    if (window.refreshIcons) window.refreshIcons();
+  }
+
+  updateWpStats(data);
+}
+
+const addWpBtn = document.getElementById('add-wp-btn');
+if (addWpBtn) {
+  addWpBtn.addEventListener('click', submitNewWpTask);
+  const wpTitleInput = document.getElementById('new-wp-title');
+  wpTitleInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitNewWpTask(); }
+  });
+}
+
+// Streak progress ring (animated stroke-dasharray)
+(function () {
+  const ring = document.getElementById('streakRingProgress');
+  if (!ring) return;
+  const circumference = 2 * Math.PI * 42;
+  const streak = {{ current_streak|default:0 }};
+  const best = {{ best_streak|default:1 }} || 1;
+  const pct = Math.min(100, Math.round(streak / best * 100));
+  const offset = circumference * (1 - pct / 100);
+  ring.style.transition = 'stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)';
+  requestAnimationFrame(() => { ring.style.strokeDashoffset = offset; });
+})();
+
+// XP This Week mini donut
+(function () {
+  const canvas = document.getElementById('weekPointsRing');
+  if (!canvas || !window.Chart) return;
+  new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [{{ week_earned|default:0 }}, {{ week_skipped|default:0 }}, 1],
+        backgroundColor: ['#10b981', '#ef4444', 'rgba(255,255,255,.05)'],
+        borderWidth: 0,
+      }],
+    },
+    options: { cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: false } } },
+  });
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}

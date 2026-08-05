@@ -1,0 +1,739 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Home — EvolveX{% endblock %}
+{% block body_class %}hub-page-body{% endblock %}
+
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --hub-mono: 'JetBrains Mono', ui-monospace, monospace; }
+  /* This page should feel wide/cinematic, not squeezed into the sitewide
+     centered ~1100-1240px .main-content — let it use almost the full
+     laptop width instead. */
+  body.hub-page-body .main-content { max-width: 1760px; padding-left: 1.5rem; padding-right: 1.5rem; }
+  @media (max-width: 900px) {
+    body.hub-page-body .main-content { padding-left: 0.75rem; padding-right: 0.75rem; }
+  }
+  /* This page isn't date-scoped like Dashboard/To-Do — hide the shared
+     "Viewing: [date]" bar here only. */
+  body.hub-page-body .header-date-bar { display: none; }
+  /* ══════════════════════════════════════════════════════════════
+     Scoped entirely under .hub-page — reuses site CSS variables
+     (--accent, --cyan, --gold, --bg-card, --border, --radius, --shadow)
+     so it matches the rest of the app; no new color system introduced.
+     ══════════════════════════════════════════════════════════════ */
+  .hub-page { position: relative; }
+
+  /* ── Hero shell ── */
+  .hub-hero {
+    position: relative; min-height: 92vh; display:flex; flex-direction:column;
+    align-items:center; justify-content:flex-start; padding-top: 6vh;
+    overflow: hidden; isolation: isolate;
+    width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw);
+  }
+
+  /* ── Laptop-sized hero (most builders/testers are on 13"–15.6" laptops,
+     ~700–900px tall viewports — 92vh there leaves a huge empty gap and
+     crops the video oddly, so scale it down at the common laptop breakpoints). ── */
+  @media (max-width: 1600px) {
+    .hub-hero { min-height: 86vh; padding-top: 5vh; }
+  }
+  @media (max-height: 820px) {
+    .hub-hero { min-height: 80vh; padding-top: 4vh; }
+  }
+  @media (max-width: 640px) {
+    .hub-hero { min-height: 100vh; border-radius: 0; padding-top: 8vh; }
+  }
+
+  /* ── Background video — sits behind the portal/fog/particle layers
+     (all z-index 0+ inside this isolated stacking context), covers the
+     hero edge-to-edge without distortion, and gets a dark scrim on top
+     so the heading/input stay readable on any footage. ── */
+  .hub-bg-video {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; object-position: center; z-index: -2;
+    pointer-events: none;
+  }
+  .hub-bg-scrim {
+    position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(6,8,20,0.55) 0%, rgba(6,8,20,0.35) 30%, rgba(6,8,20,0.55) 75%, rgba(6,8,20,0.85) 100%),
+      radial-gradient(ellipse at 50% 30%, rgba(6,8,20,0.15) 0%, rgba(6,8,20,0.65) 70%);
+  }
+
+  /* ── Portal ── */
+  .hub-portal {
+    position:absolute; top:-18%; left:50%; transform: translateX(-50%);
+    width: min(900px, 130vw); height: min(900px, 130vw); z-index:0; pointer-events:none;
+  }
+  .hub-portal-ring {
+    position:absolute; inset:0; border-radius:50%;
+    border: 1.5px solid rgba(59,130,246,0.35);
+    box-shadow: 0 0 60px rgba(59,130,246,0.25), inset 0 0 60px rgba(124,58,237,0.15);
+    animation: hubPortalPulse 5s ease-in-out infinite, hubPortalSpin 90s linear infinite;
+  }
+  .hub-portal-ring.r2 { inset: 6%; border-color: rgba(124,58,237,0.3); animation-duration: 5s, 70s; animation-direction: normal, reverse; }
+  .hub-portal-ring.r3 { inset: 13%; border-color: rgba(59,130,246,0.2); animation-duration: 5s, 110s; }
+  .hub-portal-core {
+    position:absolute; inset: 22%; border-radius:50%;
+    background: radial-gradient(circle at 50% 45%, rgba(96,165,250,0.35), rgba(124,58,237,0.12) 55%, transparent 75%);
+    filter: blur(6px);
+    animation: hubPortalBreathe 4s ease-in-out infinite;
+  }
+  @keyframes hubPortalPulse { 0%,100% { box-shadow: 0 0 60px rgba(59,130,246,0.2), inset 0 0 60px rgba(124,58,237,0.12); } 50% { box-shadow: 0 0 100px rgba(59,130,246,0.4), inset 0 0 90px rgba(124,58,237,0.22); } }
+  @keyframes hubPortalSpin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+  @keyframes hubPortalBreathe { 0%,100% { opacity:.7; transform: scale(1);} 50% { opacity:1; transform: scale(1.04);} }
+
+  /* ── Fog ── */
+  .hub-fog { position:absolute; inset:0; z-index:0; pointer-events:none; opacity:0; transition: opacity 1.4s ease; }
+  .hub-hero.hub-loaded .hub-fog { opacity:1; }
+  .hub-fog span {
+    position:absolute; width:60%; height:60%; border-radius:50%; filter: blur(60px);
+    background: radial-gradient(circle, rgba(59,130,246,0.10), transparent 70%);
+    animation: hubFogDrift 22s ease-in-out infinite;
+  }
+  .hub-fog span:nth-child(1) { top:10%; left:-10%; animation-delay: 0s; }
+  .hub-fog span:nth-child(2) { top:40%; right:-15%; animation-delay: -8s; background: radial-gradient(circle, rgba(124,58,237,0.10), transparent 70%); }
+  .hub-fog span:nth-child(3) { bottom:-10%; left:20%; animation-delay: -15s; }
+  @keyframes hubFogDrift { 0%,100% { transform: translate(0,0) scale(1);} 50% { transform: translate(4%,-3%) scale(1.08);} }
+
+  /* ── Particles ── */
+  .hub-particles { position:absolute; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
+  .hub-particles span {
+    position:absolute; left:var(--x); top:var(--y); width:var(--size); height:var(--size);
+    border-radius:50%; background:var(--pcolor); opacity:0;
+    box-shadow: 0 0 6px 1px var(--pcolor);
+    animation: hubParticleFloat var(--dur) ease-in-out infinite; animation-delay: var(--delay);
+  }
+  @keyframes hubParticleFloat {
+    0% { opacity:0; transform: translate(0,0); }
+    10% { opacity: var(--opac); }
+    50% { transform: translate(var(--dx), var(--dy)); }
+    90% { opacity: var(--opac); }
+    100% { opacity:0; transform: translate(0,0); }
+  }
+
+  /* ── Flames (bottom corners, pure CSS — layered blobs, no GIFs) ── */
+  .hub-flames { position:absolute; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
+  .hub-flame-cluster { position:absolute; bottom:-4%; width: 34vw; max-width: 460px; height: 46vh; }
+  .hub-flame-cluster.left { left:-6%; }
+  .hub-flame-cluster.right { right:-6%; }
+  .hub-flame-lick {
+    position:absolute; bottom:0; left:50%; border-radius: 50% 50% 42% 42% / 60% 60% 40% 40%;
+    background: radial-gradient(circle at 50% 85%, rgba(147,197,253,0.9), rgba(59,130,246,0.55) 45%, rgba(59,130,246,0) 78%);
+    filter: blur(2px);
+    mix-blend-mode: screen;
+    transform-origin: 50% 100%;
+    animation: hubFlameRise ease-in-out infinite;
+  }
+  .hub-flame-lick.l1 { width: 46%; height: 92%; margin-left:-38%; animation-duration: 3.2s; animation-delay: -0.4s; }
+  .hub-flame-lick.l2 { width: 34%; height: 74%; margin-left:-8%;  animation-duration: 2.6s; animation-delay: -1.1s; opacity:.85; }
+  .hub-flame-lick.l3 { width: 26%; height: 58%; margin-left:-30%; animation-duration: 3.8s; animation-delay: -2s; opacity:.7; }
+  .hub-flame-lick.l4 { width: 20%; height: 40%; margin-left: 6%;  animation-duration: 2.2s; animation-delay: -0.7s; opacity:.6; }
+  @keyframes hubFlameRise {
+    0%   { transform: scaleY(0.88) scaleX(1) skewX(0deg) translateY(0); opacity:.55; }
+    25%  { transform: scaleY(1.05) scaleX(0.94) skewX(-2deg) translateY(-2%); opacity:.9; }
+    50%  { transform: scaleY(0.95) scaleX(1.06) skewX(2deg) translateY(0); opacity:.7; }
+    75%  { transform: scaleY(1.08) scaleX(0.97) skewX(-1deg) translateY(-3%); opacity:.95; }
+    100% { transform: scaleY(0.88) scaleX(1) skewX(0deg) translateY(0); opacity:.55; }
+  }
+  .hub-spark { position:absolute; bottom:8%; width:3px; height:3px; border-radius:50%; background:#bfdbfe; box-shadow:0 0 6px 2px rgba(147,197,253,0.8); animation: hubSparkUp 2.4s ease-in infinite; }
+  @keyframes hubSparkUp { 0% { transform: translateY(0) scale(1); opacity:0; } 15% { opacity:1; } 100% { transform: translateY(-140px) scale(0.3); opacity:0; } }
+
+  /* ── Hero content ── */
+  .hub-hero-layout {
+    position:relative; z-index:3; width:100%; max-width: 1500px; margin:0 auto; padding: 0 1.5rem;
+    display:flex; gap:2rem; align-items:flex-start; justify-content:center; flex-wrap:wrap;
+  }
+  .hub-hero-main { flex:1 1 560px; max-width: 900px; text-align:center; }
+
+  /* ── Journal panel (right side) ── */
+  .hub-journal-panel {
+    flex: 0 0 340px; max-width: 340px; margin-top: 2.4rem; text-align:left;
+    background: rgba(6,9,18,0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(34,211,238,0.2); border-radius: 12px; overflow:hidden;
+  }
+  .hub-journal-chrome {
+    display:flex; align-items:center; gap:.5rem; padding:.55rem .9rem; background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .hub-journal-chrome .dot { width:9px; height:9px; border-radius:50%; }
+  .hub-journal-chrome .dot:nth-child(1) { background:#ef4444; }
+  .hub-journal-chrome .dot:nth-child(2) { background:#f59e0b; }
+  .hub-journal-chrome .dot:nth-child(3) { background:#22c55e; }
+  .hub-journal-chrome .file { font-family: var(--hub-mono); font-size:.68rem; color: var(--text-muted); margin-left:.4rem; }
+  .hub-journal-body { padding: .3rem 1rem 1rem; max-height: 58vh; overflow-y: auto; }
+  .hub-journal-empty { font-size:.78rem; color: var(--text-secondary); line-height:1.6; padding-top: .8rem; }
+  .hub-journal-entry { border-left: 2px solid rgba(34,211,238,0.35); padding: .8rem 0 .8rem .8rem; margin-top: .8rem; }
+  .hub-journal-entry:first-child { margin-top: .8rem; }
+  .hub-journal-date {
+    font-family: var(--hub-mono); font-size:.64rem; font-weight:500; color: #67e8f9; text-transform:uppercase;
+    letter-spacing:.04em; display:flex; align-items:center; justify-content:space-between; gap:.5rem;
+  }
+  .hub-journal-mood {
+    font-size:.6rem; font-weight:800; padding:.12rem .5rem; border-radius:5px;
+    background: rgba(124,58,237,0.2); color:#c4b5fd; text-transform:none; letter-spacing:0;
+  }
+  .hub-journal-text { font-size:.8rem; margin:.4rem 0 .5rem; color: var(--text-primary); line-height:1.45; }
+  .hub-journal-ai {
+    font-size:.74rem; color: var(--text-secondary); background: rgba(34,211,238,0.08);
+    border: 1px solid rgba(34,211,238,0.15); border-radius:10px; padding:.55rem .65rem; line-height:1.5;
+  }
+  .hub-journal-ai strong { color: #93c5fd; }
+  .hub-journal-ai ul { margin:.4rem 0 0 1.1rem; padding:0; }
+  .hub-journal-ai li { margin-bottom:.25rem; }
+
+  @media (max-width: 1100px) {
+    .hub-hero-layout { flex-direction:column; align-items:center; }
+    .hub-journal-panel { max-width: 560px; width:100%; margin-top: 1.5rem; }
+    .hub-journal-body { max-height: 42vh; }
+  }
+  .hub-badge {
+    display:inline-flex; align-items:center; gap:.5rem; font-family: var(--hub-mono); font-size:.74rem; font-weight:500;
+    letter-spacing:.02em; padding:.45rem 1rem; border-radius:6px; border:1px solid rgba(34,211,238,0.3);
+    background: rgba(6,10,20,0.55); color:#67e8f9;
+    opacity:0; transform: translateY(10px);
+  }
+  .hub-badge::before { content:''; width:6px; height:6px; border-radius:50%; background:#4ade80; box-shadow:0 0 8px 2px rgba(74,222,128,0.7); flex-shrink:0; }
+  .hub-badge::after { content:'▌'; margin-left:.2rem; animation: hubCursorBlink 1s step-end infinite; color:#67e8f9; }
+  @keyframes hubCursorBlink { 0%,50% { opacity:1; } 51%,100% { opacity:0; } }
+
+  .hub-title {
+    font-size: clamp(2rem, 4.4vw, 3rem); font-weight:800; margin: 1.2rem auto .6rem; line-height:1.18;
+    max-width: 720px; text-wrap: balance; text-shadow: 0 2px 24px rgba(0,0,0,0.5);
+    opacity:0; transform: translateY(14px);
+  }
+  .hub-title .accent { background: linear-gradient(100deg, var(--grad-cyan, #22d3ee), var(--accent-hover)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hub-subtitle { color: var(--text-secondary); font-size:1rem; margin-bottom: 2rem; opacity:0; transform: translateY(14px); }
+
+  .hub-prompt-box {
+    background: rgba(6,9,18,0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(34,211,238,0.22); border-radius: 12px; overflow:hidden;
+    box-shadow: var(--shadow), 0 0 0 rgba(34,211,238,0);
+    opacity:0; transform: translateY(18px) scale(.98);
+    transition: box-shadow .4s ease, border-color .4s ease;
+    text-align: left;
+  }
+  .hub-prompt-box.hub-glow { border-color: rgba(34,211,238,0.45); box-shadow: var(--shadow), 0 0 40px rgba(34,211,238,0.15); }
+  .hub-prompt-chrome {
+    display:flex; align-items:center; gap:.5rem; padding:.55rem .9rem; background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .hub-prompt-chrome .dot { width:9px; height:9px; border-radius:50%; }
+  .hub-prompt-chrome .dot:nth-child(1) { background:#ef4444; }
+  .hub-prompt-chrome .dot:nth-child(2) { background:#f59e0b; }
+  .hub-prompt-chrome .dot:nth-child(3) { background:#22c55e; }
+  .hub-prompt-chrome .file { font-family: var(--hub-mono); font-size:.68rem; color: var(--text-muted); margin-left:.4rem; }
+  .hub-prompt-row { display:flex; align-items:center; gap:.6rem; padding: .95rem 1.1rem .4rem; }
+  .hub-prompt-caret { font-family: var(--hub-mono); color:#4ade80; font-weight:700; font-size:1.05rem; flex-shrink:0; }
+  .hub-prompt-input {
+    width:100%; background:transparent; border:none; color:var(--text-primary); font-size:1rem;
+    padding:.35rem 0 .8rem; font-family: var(--hub-mono);
+  }
+  .hub-prompt-input:focus { outline:none; }
+  .hub-prompt-input::placeholder { color: var(--text-muted); }
+  .hub-prompt-box.hub-shake { animation: hubShake .4s ease; }
+  @keyframes hubShake { 20%,60% { transform: translateX(-6px);} 40%,80% { transform: translateX(6px);} 100% { transform: translateX(0);} }
+  .hub-prompt-actions { display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap; padding: .7rem 1.1rem .9rem; }
+  .hub-prompt-actions-left { display:flex; gap:.5rem; }
+  .hub-ghost-btn {
+    display:inline-flex; align-items:center; gap:.4rem; font-size:.8rem; font-weight:600; color: var(--text-secondary);
+    background: rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:.55rem .85rem; cursor:pointer;
+  }
+  .hub-ghost-btn:hover { color: var(--text-primary); border-color: rgba(59,130,246,0.4); }
+  .hub-voice-btn {
+    width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background: rgba(255,255,255,0.03); border:1px solid var(--border); color: var(--text-secondary); cursor:pointer;
+  }
+  .hub-voice-btn.listening { color:#fff; background: rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.5); animation: hubPulseRing 1.2s ease-in-out infinite; }
+  @keyframes hubPulseRing { 0%,100% { box-shadow:0 0 0 0 rgba(239,68,68,0.4);} 50% { box-shadow:0 0 0 8px rgba(239,68,68,0);} }
+  .hub-generate-btn { display:inline-flex; align-items:center; gap:.5rem; padding:.7rem 1.3rem; font-weight:700; font-size:.88rem; border-radius:10px; white-space:nowrap; }
+  .hub-upload-note { font-size:.7rem; color: var(--text-muted); padding: 0 1.1rem .8rem; min-height: 1px; }
+  .hub-upload-note.error { color:#f87171; }
+
+  .hub-chips { display:flex; flex-wrap:wrap; gap:.55rem; justify-content:center; max-width: 600px; margin: 1.4rem auto 0; opacity:0; }
+  .hub-chip {
+    display:inline-flex; align-items:center; gap:.4rem; font-family: var(--hub-mono); font-size:.72rem; font-weight:500; color: var(--text-secondary);
+    background: rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:6px; padding:.45rem .8rem; cursor:pointer;
+    transition: all .2s ease;
+  }
+  .hub-chip:hover { transform: translateY(-3px); border-color: rgba(34,211,238,0.5); color:#fff; box-shadow: 0 6px 18px rgba(34,211,238,0.18); }
+
+  .hub-scroll-cue { margin-top: 2.4rem; font-size:.78rem; color: var(--text-muted); display:flex; align-items:center; gap:.3rem; opacity:0; }
+
+  /* ── Feature nav cards ── */
+  .hub-section { position:relative; z-index:2; max-width: 1680px; margin: 0 auto; padding: 3.2rem 1rem 0; }
+  .hub-cards-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1rem; }
+  .hub-fcard {
+    position:relative; background: var(--bg-card); backdrop-filter: blur(12px); border:1px solid rgba(34,211,238,0.15);
+    border-radius: 16px; padding: 1.3rem 1.2rem; text-decoration:none; color:inherit; overflow:hidden;
+    transition: transform .35s cubic-bezier(.16,1,.3,1), border-color .3s ease, box-shadow .3s ease;
+    transform-style: preserve-3d; perspective: 600px;
+  }
+  .hub-fcard:hover { border-color: rgba(34,211,238,0.5); box-shadow: 0 16px 40px rgba(34,211,238,0.15); transform: translateY(-4px); }
+  .hub-fcard.disabled { opacity:.5; cursor:default; }
+  .hub-fcard.disabled:hover { transform:none; box-shadow:none; border-color: rgba(34,211,238,0.15); }
+  .hub-fcard-icon {
+    width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:.9rem;
+    background: linear-gradient(135deg, rgba(34,211,238,0.18), rgba(124,58,237,0.18)); color:#67e8f9;
+  }
+  .hub-fcard--violet .hub-fcard-icon { background: linear-gradient(135deg, rgba(139,92,246,0.22), rgba(236,72,153,0.14)); color:#c4b5fd; }
+  .hub-fcard--amber .hub-fcard-icon { background: linear-gradient(135deg, rgba(245,158,11,0.22), rgba(217,119,6,0.14)); color:#fbbf24; }
+  .hub-fcard--violet:hover { border-color: rgba(139,92,246,0.5); box-shadow: 0 16px 40px rgba(139,92,246,0.15); }
+  .hub-fcard--amber:hover { border-color: rgba(245,158,11,0.5); box-shadow: 0 16px 40px rgba(245,158,11,0.15); }
+  .hub-fcard-title { font-weight:700; font-size:.94rem; margin-bottom:.3rem; display:flex; align-items:center; justify-content:space-between; gap:.4rem; }
+  .hub-fcard-title .lucide { transition: transform .3s ease; opacity:.6; flex-shrink:0; }
+  .hub-fcard:hover .hub-fcard-title .lucide { transform: translateX(4px); opacity:1; }
+  .hub-fcard-desc { font-size:.76rem; color: var(--text-secondary); line-height:1.45; }
+  .hub-fcard-soon { display:inline-block; margin-top:.6rem; font-size:.62rem; font-weight:800; letter-spacing:.04em; color: var(--text-muted); background: rgba(255,255,255,0.04); padding:.15rem .5rem; border-radius:6px; }
+
+  /* ── Founder offer ── */
+  .hub-offer-wrap { display:grid; grid-template-columns: 1.1fr 1fr; gap:1.5rem; margin-top: 3.5rem; align-items:stretch; }
+  @media (max-width: 860px) { .hub-offer-wrap { grid-template-columns: 1fr; } }
+  .hub-offer-card {
+    background: linear-gradient(160deg, rgba(34,211,238,0.10), rgba(124,58,237,0.06));
+    border:1px solid rgba(34,211,238,0.3); border-radius: 18px; padding: 1.6rem;
+  }
+  .hub-offer-card h3 { font-size:1.15rem; margin-bottom:.3rem; }
+  .hub-offer-plans { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; margin: 1.2rem 0; }
+  .hub-offer-plan { background: rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:.9rem; }
+  .hub-offer-plan .p-name { font-size:.72rem; color: var(--text-secondary); font-weight:600; }
+  .hub-offer-plan .p-perk { font-size:.88rem; font-weight:700; color:#93c5fd; margin-top:.2rem; }
+  .hub-countdown { display:flex; gap:.6rem; margin: 1rem 0 1.2rem; }
+  .hub-cd-box { background: rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:10px; padding:.5rem .7rem; text-align:center; min-width:56px; }
+  .hub-cd-box b { display:block; font-size:1.2rem; }
+  .hub-cd-box span { font-size:.62rem; color: var(--text-muted); text-transform:uppercase; }
+  .hub-why-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:1.2rem; }
+  @media (max-width: 860px) { .hub-why-grid { grid-template-columns: 1fr 1fr; } }
+  .hub-why-item { text-align:center; }
+  .hub-why-icon { width:46px; height:46px; border-radius:12px; margin:0 auto .7rem; display:flex; align-items:center; justify-content:center; background: rgba(34,211,238,0.1); color:#93c5fd; }
+  .hub-why-item h4 { font-size:.88rem; margin-bottom:.3rem; }
+  .hub-why-item p { font-size:.76rem; color: var(--text-secondary); line-height:1.5; }
+
+  /* ── Testimonials ── */
+  .hub-testi-row { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap:1rem; margin-top:1.2rem; }
+  .hub-testi-card { background: var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1.1rem; }
+  .hub-testi-top { display:flex; align-items:center; gap:.7rem; margin-bottom:.6rem; }
+  .hub-testi-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.8rem; color:#fff; flex-shrink:0; }
+  .hub-testi-name { font-size:.85rem; font-weight:700; }
+  .hub-testi-stars { color: var(--gold); font-size:.72rem; }
+  .hub-testi-text { font-size:.8rem; color: var(--text-secondary); line-height:1.5; }
+
+  /* ── Scroll reveal ── */
+  .hub-reveal { opacity:0; transform: translateY(24px) scale(.98); filter: blur(4px); transition: opacity .7s ease, transform .7s cubic-bezier(.16,1,.3,1), filter .7s ease; }
+  .hub-reveal.in-view { opacity:1; transform: translateY(0) scale(1); filter: blur(0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hub-page *, .hub-page *::before, .hub-page *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hub-page">
+
+  <section class="hub-hero" id="hubHero">
+    <video class="hub-bg-video" autoplay muted loop playsinline preload="auto" aria-hidden="true">
+      <source src="{% static 'videos/hub-bg.mp4' %}" type="video/mp4">
+    </video>
+    <div class="hub-bg-scrim" aria-hidden="true"></div>
+    <div class="hub-fog" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="hub-particles" id="hubParticles" aria-hidden="true"></div>
+    <div class="hub-flames" aria-hidden="true">
+      <div class="hub-flame-cluster left">
+        <div class="hub-flame-lick l1"></div>
+        <div class="hub-flame-lick l2"></div>
+        <div class="hub-flame-lick l3"></div>
+        <div class="hub-flame-lick l4"></div>
+      </div>
+      <div class="hub-flame-cluster right">
+        <div class="hub-flame-lick l1"></div>
+        <div class="hub-flame-lick l2"></div>
+        <div class="hub-flame-lick l3"></div>
+        <div class="hub-flame-lick l4"></div>
+      </div>
+    </div>
+
+    <div class="hub-hero-layout">
+      <div class="hub-hero-main">
+        <span class="hub-badge" id="hubBadge">SYSTEM STATUS · ONLINE</span>
+        <h1 class="hub-title" id="hubTitle">What's your current status <span class="accent">right now</span>??</h1>
+        <p class="hub-subtitle" id="hubSubtitle">Log it. EvolveX reads the pattern and hands you the next move.</p>
+
+        <div class="hub-prompt-box" id="hubPromptBox">
+          <form method="post" action="{% url 'journal_save' %}" id="hubGoalForm" novalidate>
+            {% csrf_token %}
+            <div class="hub-prompt-chrome">
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              <span class="file">status_log — {% now "d M Y" %}</span>
+            </div>
+            <div class="hub-prompt-row">
+              <span class="hub-prompt-caret">&gt;</span>
+              <input type="text" name="entry_text" id="hubGoalInput" class="hub-prompt-input"
+                     placeholder="I've been slacking on my goals this week…">
+            </div>
+            <div class="hub-prompt-actions">
+              <div class="hub-prompt-actions-left">
+                <button type="button" class="hub-voice-btn" id="hubVoiceBtn" title="Voice input">
+                  <i data-lucide="mic" class="lucide"></i>
+                </button>
+              </div>
+              <button type="submit" class="btn btn-primary hub-generate-btn">
+                <i data-lucide="book-open" class="lucide"></i> Update the Journal
+              </button>
+            </div>
+          </form>
+          <div class="hub-upload-note" id="hubUploadNote"></div>
+        </div>
+
+        <div class="hub-chips" id="hubChips">
+          <span class="hub-chip" onclick="hubSetGoal(this)"><i data-lucide="frown" class="lucide" style="width:13px;height:13px;"></i> Feeling Stuck</span>
+          <span class="hub-chip" onclick="hubSetGoal(this)"><i data-lucide="flame" class="lucide" style="width:13px;height:13px;"></i> Crushing It Today</span>
+          <span class="hub-chip" onclick="hubSetGoal(this)"><i data-lucide="trending-down" class="lucide" style="width:13px;height:13px;"></i> Falling Behind</span>
+          <span class="hub-chip" onclick="hubSetGoal(this)"><i data-lucide="battery" class="lucide" style="width:13px;height:13px;"></i> Losing Motivation</span>
+          <span class="hub-chip" onclick="hubSetGoal(this)"><i data-lucide="check-circle-2" class="lucide" style="width:13px;height:13px;"></i> Staying Consistent</span>
+          <span class="hub-chip" onclick="hubSetGoal(this)"><i data-lucide="sunrise" class="lucide" style="width:13px;height:13px;"></i> Starting Fresh</span>
+        </div>
+
+        <div class="hub-scroll-cue" id="hubScrollCue"><i data-lucide="chevron-down" class="lucide" style="width:14px;height:14px;"></i> Scroll to explore <i data-lucide="chevron-down" class="lucide" style="width:14px;height:14px;"></i></div>
+      </div>
+
+      <aside class="hub-journal-panel">
+        <div class="hub-journal-chrome">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="file">your_journal.log</span>
+        </div>
+        <div class="hub-journal-body">
+        {% if journal_entries %}
+          {% for entry in journal_entries %}
+          <div class="hub-journal-entry">
+            <div class="hub-journal-date">
+              <span>{{ entry.date|date:"D, d M Y" }}</span>
+              {% if entry.ai_mood_tag %}<span class="hub-journal-mood">{{ entry.ai_mood_tag }}</span>{% endif %}
+            </div>
+            <div class="hub-journal-text">{{ entry.entry_text|truncatechars:140 }}</div>
+            {% if entry.ai_response %}
+            <div class="hub-journal-ai">
+              <strong>AI:</strong> {{ entry.ai_response }}
+              {% if entry.ai_suggestions %}
+              <ul>
+                {% for s in entry.ai_suggestions %}<li>{{ s }}</li>{% endfor %}
+              </ul>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="hub-journal-empty">No entries yet — write how you're feeling on the left and hit "Update the Journal" to start tracking. A new line saves here every day.</p>
+        {% endif %}
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ── Feature nav cards ── -->
+  <section class="hub-section hub-reveal">
+    <div style="margin-bottom:1.4rem;">
+      <div style="font-family:var(--hub-mono);font-size:.68rem;color:#67e8f9;letter-spacing:.08em;margin-bottom:.4rem;">MODULES</div>
+      <h2 style="font-size:1.5rem;font-weight:800;margin:0;">Everything that levels you up</h2>
+    </div>
+    <div class="hub-cards-grid">
+      <a href="{% url 'roadmap_home' %}" class="hub-fcard">
+        <div class="hub-fcard-icon"><i data-lucide="map" class="lucide"></i></div>
+        <div class="hub-fcard-title">AI Roadmap <i data-lucide="arrow-right" class="lucide" style="width:15px;height:15px;"></i></div>
+        <div class="hub-fcard-desc">Your step-by-step AI-generated roadmap for any goal.</div>
+      </a>
+      <div class="hub-fcard disabled">
+        <div class="hub-fcard-icon"><i data-lucide="bot" class="lucide"></i></div>
+        <div class="hub-fcard-title">AI Coach</div>
+        <div class="hub-fcard-desc">Your personal AI coach, available 24/7 for guidance.</div>
+        <span class="hub-fcard-soon">COMING SOON</span>
+      </div>
+      <a href="{% url 'boss_battle' %}" class="hub-fcard hub-fcard--violet">
+        <div class="hub-fcard-icon"><i data-lucide="swords" class="lucide"></i></div>
+        <div class="hub-fcard-title">Boss Fights <i data-lucide="arrow-right" class="lucide" style="width:15px;height:15px;"></i></div>
+        <div class="hub-fcard-desc">Complete challenges, defeat bosses and level up.</div>
+      </a>
+      <a href="{% url 'analyzer_home' %}" class="hub-fcard">
+        <div class="hub-fcard-icon"><i data-lucide="bar-chart-3" class="lucide"></i></div>
+        <div class="hub-fcard-title">AI Analyzer <i data-lucide="arrow-right" class="lucide" style="width:15px;height:15px;"></i></div>
+        <div class="hub-fcard-desc">Deep analysis of your performance and habits.</div>
+      </a>
+      <a href="{% url 'reports_home' %}" class="hub-fcard hub-fcard--amber">
+        <div class="hub-fcard-icon"><i data-lucide="target" class="lucide"></i></div>
+        <div class="hub-fcard-title">Progress <i data-lucide="arrow-right" class="lucide" style="width:15px;height:15px;"></i></div>
+        <div class="hub-fcard-desc">Track your daily progress and consistency.</div>
+      </a>
+      <div class="hub-fcard hub-fcard--amber disabled">
+        <div class="hub-fcard-icon"><i data-lucide="gift" class="lucide"></i></div>
+        <div class="hub-fcard-title">Rewards</div>
+        <div class="hub-fcard-desc">Earn points, unlock rewards and achieve milestones.</div>
+        <span class="hub-fcard-soon">COMING SOON</span>
+      </div>
+      <a href="{% url 'willpower' %}" class="hub-fcard hub-fcard--violet">
+        <div class="hub-fcard-icon"><i data-lucide="zap" class="lucide"></i></div>
+        <div class="hub-fcard-title">Willpower <i data-lucide="arrow-right" class="lucide" style="width:15px;height:15px;"></i></div>
+        <div class="hub-fcard-desc">Build willpower and strengthen your self-control.</div>
+      </a>
+      <a href="{% url 'diet' %}" class="hub-fcard">
+        <div class="hub-fcard-icon"><i data-lucide="apple" class="lucide"></i></div>
+        <div class="hub-fcard-title">Diet Tracker <i data-lucide="arrow-right" class="lucide" style="width:15px;height:15px;"></i></div>
+        <div class="hub-fcard-desc">Track your diet, calories and nutrition.</div>
+      </a>
+      <a href="{% url 'pricing' %}" class="hub-fcard hub-fcard--amber">
+        <div class="hub-fcard-icon"><i data-lucide="crown" class="lucide"></i></div>
+        <div class="hub-fcard-title">Premium <i data-lucide="arrow-right" class="lucide" style="width:15px;height:15px;"></i></div>
+        <div class="hub-fcard-desc">Unlock premium features and AI power.</div>
+      </a>
+    </div>
+  </section>
+
+  {% if promo_active %}
+  <section class="hub-section hub-reveal">
+    <div class="hub-offer-wrap">
+      <div class="hub-offer-card">
+        <h3><i data-lucide="rocket" class="lucide" style="width:18px;height:18px;vertical-align:-3px;"></i> Founder's Launch Offer</h3>
+        <p style="color:var(--text-secondary); font-size:.82rem;">Limited time offer for early builders.</p>
+        <div class="hub-offer-plans">
+          <div class="hub-offer-plan">
+            <div class="p-name">3-Month Plan</div>
+            <div class="p-perk">Get 1 Year Access</div>
+          </div>
+          <div class="hub-offer-plan">
+            <div class="p-name">Yearly Plan</div>
+            <div class="p-perk">Get Lifetime Access</div>
+          </div>
+        </div>
+        <div style="font-size:.72rem; color:var(--text-muted); margin-bottom:.4rem;">Offer ends in</div>
+        <div class="hub-countdown" id="hubCountdown" data-deadline="{{ promo_deadline_iso }}">
+          <div class="hub-cd-box"><b id="hubCdDays">--</b><span>Days</span></div>
+          <div class="hub-cd-box"><b id="hubCdHours">--</b><span>Hours</span></div>
+          <div class="hub-cd-box"><b id="hubCdMins">--</b><span>Minutes</span></div>
+          <div class="hub-cd-box"><b id="hubCdSecs">--</b><span>Seconds</span></div>
+        </div>
+        <a href="{% url 'pricing' %}" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:.5rem;">
+          View Pricing <i data-lucide="arrow-right" class="lucide" style="width:15px;height:15px;"></i>
+        </a>
+      </div>
+
+      <div>
+        <h3 style="margin-bottom:1rem;">Why EvolveX is <span class="accent" style="background:linear-gradient(100deg,#60a5fa,var(--accent-hover));-webkit-background-clip:text;background-clip:text;color:transparent;">Different</span></h3>
+        <div class="hub-why-grid">
+          <div class="hub-why-item">
+            <div class="hub-why-icon"><i data-lucide="brain-circuit" class="lucide"></i></div>
+            <h4>AI-First</h4>
+            <p>Everything powered by advanced AI to give you personalized guidance.</p>
+          </div>
+          <div class="hub-why-item">
+            <div class="hub-why-icon"><i data-lucide="shield-check" class="lucide"></i></div>
+            <h4>Gamified Growth</h4>
+            <p>Turn your goals into adventures. Win battles, earn rewards, level up.</p>
+          </div>
+          <div class="hub-why-item">
+            <div class="hub-why-icon"><i data-lucide="sparkles" class="lucide"></i></div>
+            <h4>Built for Consistency</h4>
+            <p>Tools designed to help you stay consistent and build unstoppable habits.</p>
+          </div>
+          <div class="hub-why-item">
+            <div class="hub-why-icon"><i data-lucide="lock" class="lucide"></i></div>
+            <h4>Privacy First</h4>
+            <p>Your data is yours. We respect your privacy and keep it secure.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="hub-section hub-reveal" style="padding-bottom: 3rem;">
+    <h3 style="margin-bottom:1rem;">Loved by <span class="accent" style="background:linear-gradient(100deg,#60a5fa,var(--accent-hover));-webkit-background-clip:text;background-clip:text;color:transparent;">Builders</span></h3>
+    <div class="hub-testi-row">
+      <div class="hub-testi-card">
+        <div class="hub-testi-top">
+          <div class="hub-testi-avatar" style="background:linear-gradient(135deg,#3b82f6,#7c3aed);">AV</div>
+          <div>
+            <div class="hub-testi-name">Aman Verma</div>
+            <div class="hub-testi-stars">★★★★★</div>
+          </div>
+        </div>
+        <div class="hub-testi-text">EvolveX changed the way I approach my goals. The roadmap is insanely accurate!</div>
+      </div>
+      <div class="hub-testi-card">
+        <div class="hub-testi-top">
+          <div class="hub-testi-avatar" style="background:linear-gradient(135deg,#ec4899,#7c3aed);">RS</div>
+          <div>
+            <div class="hub-testi-name">Riya Sharma</div>
+            <div class="hub-testi-stars">★★★★★</div>
+          </div>
+        </div>
+        <div class="hub-testi-text">The boss fights keep me so motivated. This isn't just an app, it's a game changer.</div>
+      </div>
+      <div class="hub-testi-card">
+        <div class="hub-testi-top">
+          <div class="hub-testi-avatar" style="background:linear-gradient(135deg,#10b981,#3b82f6);">KM</div>
+          <div>
+            <div class="hub-testi-name">Karan Mehta</div>
+            <div class="hub-testi-stars">★★★★★</div>
+          </div>
+        </div>
+        <div class="hub-testi-text">Best investment I made. The AI coach is like having a mentor 24/7.</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const hero = document.getElementById('hubHero');
+
+  // ── Page-load sequence: badge -> title -> subtitle -> prompt -> chips -> scroll cue ──
+  const seq = [
+    ['hubBadge', 0], ['hubTitle', 120], ['hubSubtitle', 220],
+    ['hubPromptBox', 340], ['hubChips', 560], ['hubScrollCue', 700],
+  ];
+  seq.forEach(([id, delay]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    setTimeout(() => {
+      el.style.transition = 'opacity .6s ease, transform .6s cubic-bezier(.16,1,.3,1)';
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0) scale(1)';
+    }, delay);
+  });
+  setTimeout(() => { hero.classList.add('hub-loaded'); }, 100);
+  setTimeout(() => {
+    document.getElementById('hubPromptBox').classList.add('hub-glow');
+  }, 900);
+
+  // ── Particles ──
+  const field = document.getElementById('hubParticles');
+  if (field) {
+    const colors = ['#93c5fd', '#a78bfa', '#ffffff'];
+    const count = window.innerWidth < 600 ? 16 : 30;
+    for (let i = 0; i < count; i++) {
+      const dot = document.createElement('span');
+      dot.style.setProperty('--x', Math.random() * 100 + '%');
+      dot.style.setProperty('--y', (20 + Math.random() * 70) + '%');
+      dot.style.setProperty('--size', (Math.random() * 2.5 + 1.5).toFixed(1) + 'px');
+      dot.style.setProperty('--pcolor', colors[i % colors.length]);
+      dot.style.setProperty('--opac', (Math.random() * 0.4 + 0.3).toFixed(2));
+      dot.style.setProperty('--dur', (Math.random() * 8 + 8).toFixed(1) + 's');
+      dot.style.setProperty('--delay', (Math.random() * 6).toFixed(1) + 's');
+      dot.style.setProperty('--dx', (Math.random() * 50 - 25).toFixed(0) + 'px');
+      dot.style.setProperty('--dy', (Math.random() * -60 - 10).toFixed(0) + 'px');
+      field.appendChild(dot);
+    }
+  }
+
+  // ── Sparks off the flame tips ──
+  document.querySelectorAll('.hub-flame-cluster').forEach((cluster, ci) => {
+    for (let i = 0; i < 5; i++) {
+      const s = document.createElement('span');
+      s.className = 'hub-spark';
+      s.style.left = (15 + Math.random() * 70) + '%';
+      s.style.animationDelay = (Math.random() * 2.4).toFixed(2) + 's';
+      s.style.animationDuration = (1.8 + Math.random() * 1.4).toFixed(2) + 's';
+      cluster.appendChild(s);
+    }
+  });
+
+  // ── Suggestion chips fill the status input ──
+  window.hubSetGoal = function (chip) {
+    const text = chip.textContent.trim();
+    const input = document.getElementById('hubGoalInput');
+    input.value = "I'm " + text.toLowerCase();
+    input.focus();
+  };
+
+  // Upload Goal button was removed — hubUploadNote is still used by the
+  // voice-input feature below for its status messages.
+  const uploadNote = document.getElementById('hubUploadNote');
+
+  // ── Custom validation on the journal form (novalidate is set on the
+  // <form>, so this replaces the generic browser "Please fill out this
+  // field" tooltip with an in-theme message + shake). ──
+  const goalForm = document.getElementById('hubGoalForm');
+  const promptBox = document.getElementById('hubPromptBox');
+  if (goalForm) {
+    goalForm.addEventListener('submit', (e) => {
+      const input = document.getElementById('hubGoalInput');
+      if (!input.value.trim()) {
+        e.preventDefault();
+        uploadNote.textContent = 'Write something before you update the journal.';
+        uploadNote.classList.add('error');
+        promptBox.classList.remove('hub-shake'); void promptBox.offsetWidth; promptBox.classList.add('hub-shake');
+        input.focus();
+      }
+    });
+    document.getElementById('hubGoalInput').addEventListener('input', () => {
+      uploadNote.textContent = '';
+      uploadNote.classList.remove('error');
+    });
+  }
+
+  // ── Voice input (Web Speech API where supported) ──
+  const voiceBtn = document.getElementById('hubVoiceBtn');
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (voiceBtn) {
+    if (!SpeechRecognition) {
+      voiceBtn.addEventListener('click', () => {
+        uploadNote.textContent = 'Voice input isn\'t supported in this browser.';
+      });
+    } else {
+      const recog = new SpeechRecognition();
+      recog.lang = 'en-US';
+      recog.interimResults = false;
+      let listening = false;
+      voiceBtn.addEventListener('click', () => {
+        if (listening) { recog.stop(); return; }
+        recog.start();
+      });
+      recog.addEventListener('start', () => { listening = true; voiceBtn.classList.add('listening'); });
+      recog.addEventListener('end', () => { listening = false; voiceBtn.classList.remove('listening'); });
+      recog.addEventListener('result', (e) => {
+        const transcript = e.results[0][0].transcript;
+        document.getElementById('hubGoalInput').value = transcript;
+      });
+      recog.addEventListener('error', () => { listening = false; voiceBtn.classList.remove('listening'); });
+    }
+  }
+
+  // ── Founder offer countdown ──
+  const cdEl = document.getElementById('hubCountdown');
+  if (cdEl) {
+    const deadline = new Date(cdEl.dataset.deadline).getTime();
+    function tick() {
+      const diff = deadline - Date.now();
+      if (diff <= 0) { cdEl.innerHTML = '<div style="font-size:.85rem;color:var(--text-secondary);">Offer has ended</div>'; return; }
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      document.getElementById('hubCdDays').textContent = d;
+      document.getElementById('hubCdHours').textContent = String(h).padStart(2, '0');
+      document.getElementById('hubCdMins').textContent = String(m).padStart(2, '0');
+      document.getElementById('hubCdSecs').textContent = String(s).padStart(2, '0');
+    }
+    tick();
+    setInterval(tick, 1000);
+  }
+
+  // ── Scroll reveal ──
+  const revealEls = document.querySelectorAll('.hub-reveal');
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) { entry.target.classList.add('in-view'); io.unobserve(entry.target); }
+      });
+    }, { threshold: 0.15 });
+    revealEls.forEach(el => io.observe(el));
+  } else {
+    revealEls.forEach(el => el.classList.add('in-view'));
+  }
+})();
+</script>
+{% endblock %}

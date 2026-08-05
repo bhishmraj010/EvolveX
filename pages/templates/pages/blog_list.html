@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Blog — EvolveX{% endblock %}
+{% block body_class %}theme-obsidian{% endblock %}
+
+{% block extra_head %}
+<style>
+  .pg-head{text-align:center;padding:1.6rem 1rem 2rem;animation:fade-in-up .5s ease both;}
+  .pg-head h1{font-size:1.9rem;font-weight:800;background:linear-gradient(90deg,var(--accent),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .pg-head p{color:var(--text-secondary);font-size:0.9rem;margin-top:0.5rem;}
+
+  .pg-blog-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.2rem;}
+
+  .pg-post-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;overflow:hidden;backdrop-filter:blur(10px);
+    animation:fade-in-up .55s ease both; transition:border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+    display:flex;flex-direction:column;}
+  .pg-post-card:hover{border-color:var(--accent)66;box-shadow:0 12px 30px rgba(0,0,0,.35);transform:translateY(-3px);}
+
+  .pg-post-cover{width:100%;height:150px;object-fit:cover;background:linear-gradient(135deg,var(--accent)33,var(--cyan)22);}
+  .pg-post-cover-fallback{
+    width:100%;height:150px;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,var(--accent)33,var(--cyan)22);
+  }
+
+  .pg-post-body{padding:1.1rem 1.2rem 1.3rem;display:flex;flex-direction:column;flex:1;}
+  .pg-post-meta{font-size:0.72rem;color:var(--text-muted);margin-bottom:0.5rem;display:flex;gap:0.6rem;align-items:center;}
+  .pg-post-title{font-size:1rem;font-weight:700;color:var(--text-primary);margin-bottom:0.5rem;line-height:1.35;}
+  .pg-post-excerpt{font-size:0.83rem;color:var(--text-secondary);line-height:1.55;flex:1;}
+  .pg-post-link{margin-top:0.9rem;font-size:0.8rem;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:0.3rem;}
+  .pg-post-link:hover{color:var(--accent-hover);}
+
+  .pg-empty{text-align:center;padding:3rem 1rem;color:var(--text-secondary);}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="pg-head">
+  <h1>From the EvolveX blog</h1>
+  <p>Tips on discipline, habit design, and getting the most out of your evolution engine.</p>
+</div>
+
+{% if posts %}
+<div class="pg-blog-grid">
+  {% for post in posts %}
+  <div class="pg-post-card">
+    {% if post.cover_image %}
+      <img class="pg-post-cover" src="{{ post.cover_image.url }}" alt="{{ post.title }}">
+    {% else %}
+      <div class="pg-post-cover-fallback">
+        <i data-lucide="newspaper" class="lucide" style="color:var(--accent);width:32px;height:32px;"></i>
+      </div>
+    {% endif %}
+    <div class="pg-post-body">
+      <div class="pg-post-meta">
+        <i data-lucide="calendar" class="lucide" style="width:12px;height:12px;"></i>
+        {{ post.published_at|date:"d M Y" }}
+        <span>·</span>
+        {{ post.reading_time_minutes }} min read
+      </div>
+      <div class="pg-post-title">{{ post.title }}</div>
+      <div class="pg-post-excerpt">{{ post.excerpt|default:post.content|truncatewords:22 }}</div>
+      <a class="pg-post-link" href="{% url 'blog_detail' post.slug %}">
+        Read more <i data-lucide="arrow-right" class="lucide" style="width:14px;height:14px;"></i>
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="pg-empty">
+  <i data-lucide="pen-line" class="lucide" style="width:40px;height:40px;color:var(--text-muted);margin:0 auto 0.8rem;display:block;"></i>
+  No posts yet — check back soon.
+</div>
+{% endif %}
+
+{% endblock %}

@@ -21,7 +21,7 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
-    "life-simulation-9bqz.onrender.com",
+    "https://evolvex-i5ud.onrender.com",
 ]
 
 # Render sets this automatically at deploy time — covers the case where

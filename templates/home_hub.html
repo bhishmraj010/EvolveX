@@ -305,16 +305,6 @@
   }
   .evx4-offer-btn:hover { transform: translateY(-2px); box-shadow: 0 16px 40px -6px rgba(90,50,255,0.6); }
 
-  /* ===== Footer ===== */
-  .evx4-footer { border-top: 1px solid rgba(255,255,255,0.06); padding: 36px 0 32px; }
-  .evx4-footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 18px; }
-  .evx4-footer .brand { font-weight: 800; font-size: 1.15rem; letter-spacing: -.02em; color: #f5f5fa; }
-  .evx4-footer .brand span { color: #a78bfa; }
-  .evx4-footer-links { display: flex; flex-wrap: wrap; gap: 20px 30px; font-size: .85rem; color: #9095a6; }
-  .evx4-footer-links a { transition: color .2s; }
-  .evx4-footer-links a:hover { color: #e8e9f0; }
-  .evx4-footer .copy { font-size: .78rem; color: #565c6e; width: 100%; text-align: center; margin-top: 14px; }
-
   /* ===== Responsive ===== */
   @media (min-width: 901px) {
     .evx4 .container { padding-left: 156px; }
@@ -335,8 +325,6 @@
     .evx4-btn-primary { width: 100%; justify-content: center; }
     .evx4-btn-cta { width: 100%; padding: 15px 24px; }
     .evx4-offer { padding: 28px 22px; }
-    .evx4-footer-inner { flex-direction: column; align-items: center; text-align: center; }
-    .evx4-footer-links { justify-content: center; }
   }
 </style>
 {% endblock %}
@@ -409,17 +397,31 @@
             Today's entry
           </div>
           <h2>What happened today?</h2>
-          <p class="sub">No filters. No judgment. Just you and AI.</p>
+          <p class="sub">No filters. No judgment. Just write it down.</p>
 
-          <textarea class="evx4-textarea" placeholder="Write your journal…" rows="4"></textarea>
+          {% if user.is_authenticated %}
+          <form method="post" action="{% url 'journal_save' %}" id="evx4-journal-form">
+            {% csrf_token %}
+            <textarea name="entry_text" class="evx4-textarea" placeholder="Write your journal…" rows="4"></textarea>
 
+            <div class="evx4-journal-actions">
+              <span class="evx4-journal-hint">{% if todays_entry %}Saved for today — write again to update it.{% else %}Takes less than 2 minutes.{% endif %}</span>
+              <button class="evx4-btn-primary" type="submit" id="evx4-journal-submit">
+                <span class="evx4-journal-submit-label">{% if todays_entry %}Update Entry{% else %}Save Journal{% endif %}</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+          </form>
+          {% else %}
+          <textarea class="evx4-textarea" placeholder="Log in to start journaling…" rows="4" disabled></textarea>
           <div class="evx4-journal-actions">
             <span class="evx4-journal-hint">Takes less than 2 minutes.</span>
-            <button class="evx4-btn-primary" type="button">
-              Analyze with AI
+            <a href="{% url 'login' %}?next={% url 'home' %}" class="evx4-btn-primary">
+              Log in to Journal
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </button>
+            </a>
           </div>
+          {% endif %}
         </div>
       </div>
 
@@ -513,24 +515,6 @@
     </div>
   </section>
   </main>
-
-  <!-- ===== Footer ===== -->
-  <footer class="evx4-footer">
-    <div class="container">
-      <div class="evx4-footer-inner">
-        <div class="brand">Evolve<span>X</span></div>
-        <div class="evx4-footer-links">
-          <a href="#">About</a>
-          <a href="#">Privacy</a>
-          <a href="#">Terms</a>
-          <a href="#">Contact</a>
-          <a href="#">Blog</a>
-          <a href="#">Careers</a>
-        </div>
-        <div class="copy">&copy; 2026 EvolveX. All rights reserved.</div>
-      </div>
-    </div>
-  </footer>
 </div>
 {% endblock %}
 
@@ -558,6 +542,18 @@
     });
   }, { threshold: 0.12 });
   els.forEach(function (el) { io.observe(el); });
+
+  // Journal form: show a lightweight "Saving…" state on submit.
+  var journalForm = document.getElementById('evx4-journal-form');
+  if (journalForm) {
+    journalForm.addEventListener('submit', function () {
+      var btn = document.getElementById('evx4-journal-submit');
+      if (!btn) return;
+      btn.disabled = true;
+      var label = btn.querySelector('.evx4-journal-submit-label');
+      if (label) label.textContent = 'Saving…';
+    });
+  }
 })();
 </script>
 {% endblock %}

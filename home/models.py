@@ -5,9 +5,9 @@ from django.utils import timezone
 
 class JournalEntry(models.Model):
     """
-    One "how am I doing right now" journal entry per user per day, written
-    from the Home hub. Submitting again on the same day updates that day's
-    entry rather than creating a duplicate (see journal_save_view).
+    One or more "how am I doing right now" journal entries per user per day,
+    written from the Home hub. Multiple entries per day are allowed —
+    each submission creates a new row (see home/views.py -> journal_save_view).
 
     ai_response / ai_suggestions are filled in by Gemini right after save
     (see home/views.py -> _build_journal_prompt). If the AI call fails for
@@ -30,9 +30,8 @@ class JournalEntry(models.Model):
 
     class Meta:
         ordering = ["-date", "-created_at"]
-        constraints = [
-            models.UniqueConstraint(fields=["user", "date"], name="one_journal_entry_per_user_per_day")
-        ]
+        # NOTE: UniqueConstraint on (user, date) removed — that was capping
+        # entries at one-per-day. Multiple entries/day now allowed.
 
     def __str__(self):
         return f"{self.user} — {self.date}"

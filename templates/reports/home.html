@@ -102,11 +102,7 @@
       {% endfor %}
     </select>
   </div>
-  <div class="rp-quote">
-    <i data-lucide="sparkle" class="lucide" style="color:var(--accent);"></i>
-    "Discipline today, freedom tomorrow."
-    <b>— EvolveX</b>
-  </div>
+  
   <div class="rp-range-toggle">
     {% for val, label in range_options %}
       <a href="?range={{ val }}" class="{% if val == days %}active{% endif %}">{{ label }}</a>

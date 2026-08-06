@@ -67,6 +67,7 @@ def analyzer_home(request):
             {"key": "todo", "title": "Todo Tracker", "icon": "list-checks", "data": report.todo_report},
             {"key": "willpower", "title": "Willpower", "icon": "flame", "data": report.willpower_report},
             {"key": "diet", "title": "Diet Tracker", "icon": "utensils", "data": report.diet_report},
+            {"key": "journal", "title": "Journal", "icon": "book-open", "data": report.journal_report},
             {"key": "roadmap", "title": "Roadmap", "icon": "map", "data": report.roadmap_report},
             {"key": "boss_fight", "title": "Boss Fight", "icon": "swords", "data": report.boss_fight_report},
         ] if report else [],

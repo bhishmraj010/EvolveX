@@ -159,12 +159,55 @@ def get_level_data(level_num):
     return None
 
 
+# ─── Timezone choices ────────────────────────────────────────────────────────
+# A curated, common IANA timezone list for the (optional) manual dropdown in
+# Account Settings. Auto-detection (via browser JS + the set_timezone view)
+# is the primary path and works with ANY valid IANA name, not just this list
+# — this is just what's offered as a fallback/manual-override menu.
+TIMEZONE_CHOICES = [
+    ('', 'Auto-detect (recommended)'),
+    ('Asia/Kolkata', '🇮🇳 India — Asia/Kolkata (IST)'),
+    ('America/New_York', '🇺🇸 USA Eastern — America/New_York'),
+    ('America/Chicago', '🇺🇸 USA Central — America/Chicago'),
+    ('America/Denver', '🇺🇸 USA Mountain — America/Denver'),
+    ('America/Los_Angeles', '🇺🇸 USA Pacific — America/Los_Angeles'),
+    ('America/Toronto', '🇨🇦 Canada — America/Toronto'),
+    ('Europe/London', '🇬🇧 UK — Europe/London'),
+    ('Europe/Berlin', '🇩🇪 Germany — Europe/Berlin'),
+    ('Europe/Paris', '🇫🇷 France — Europe/Paris'),
+    ('Australia/Sydney', '🇦🇺 Australia — Australia/Sydney'),
+    ('Asia/Dubai', '🇦🇪 UAE — Asia/Dubai'),
+    ('Asia/Riyadh', '🇸🇦 Saudi Arabia — Asia/Riyadh'),
+    ('Asia/Qatar', '🇶🇦 Qatar — Asia/Qatar'),
+    ('Asia/Singapore', '🇸🇬 Singapore — Asia/Singapore'),
+    ('Asia/Tokyo', '🇯🇵 Japan — Asia/Tokyo'),
+    ('Asia/Shanghai', '🇨🇳 China — Asia/Shanghai'),
+    ('Asia/Dhaka', '🇧🇩 Bangladesh — Asia/Dhaka'),
+    ('Asia/Karachi', '🇵🇰 Pakistan — Asia/Karachi'),
+    ('Asia/Colombo', '🇱🇰 Sri Lanka — Asia/Colombo'),
+]
+
+
 class CustomUser(AbstractUser):
     email        = models.EmailField(unique=True)
     name         = models.CharField(max_length=100, blank=True)
     avatar       = models.ImageField(upload_to='avatars/', blank=True, null=True)
     bio          = models.TextField(max_length=300, blank=True)
     phone_number = models.CharField(max_length=20, unique=True, blank=True, null=True)
+
+    # IANA timezone name (e.g. 'Asia/Kolkata', 'America/New_York'). Blank
+    # means "not detected/set yet" — UserTimezoneMiddleware falls back to
+    # the `tz` cookie, then to settings.TIME_ZONE, in that case. Normally
+    # auto-populated by browser JS (see base.html) right after login/signup,
+    # but can also be overridden manually from Account Settings using
+    # TIMEZONE_CHOICES above.
+    timezone = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        help_text="IANA timezone name, auto-detected from the browser. "
+                  "Drives streaks, daily resets, and deadlines in the user's local time.",
+    )
 
     # ── Level System ──
     level            = models.IntegerField(default=1)

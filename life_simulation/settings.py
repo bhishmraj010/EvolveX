@@ -75,6 +75,7 @@ MIDDLEWARE = [
     "life_simulation.middleware.SelectedDateMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "life_simulation.middleware.UserTimezoneMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",

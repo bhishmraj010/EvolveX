@@ -1,6 +1,7 @@
 import hmac
 import random
 import time
+import zoneinfo
 
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash, get_user_model
@@ -10,7 +11,9 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
 from django.http import JsonResponse
+
 from django.core.mail import send_mail
 from django.conf import settings
 from datetime import timedelta
@@ -470,6 +473,12 @@ def profile_view(request):
     week_done = week_tasks.filter(status='completed').count()
     weekly_goal_pct = round(week_done / week_total * 100) if week_total else 0
 
+    from home.models import JournalEntry
+    # Multiple entries per day are now allowed — order explicitly
+    # (most recent day first, most recent time within that day first)
+    # instead of relying on the model's implicit Meta.ordering.
+    journal_entries = JournalEntry.objects.filter(user=user).order_by('-date', '-created_at')[:20]
+
     context = {
         'form': ProfileForm(instance=user),
         'cur_level': cur_level,
@@ -487,6 +496,7 @@ def profile_view(request):
         'badges_total': len(badges),
         'character_title': character_title,
         'weekly_goal_pct': weekly_goal_pct,
+        'journal_entries': journal_entries,
     }
     return render(request, 'users/profile.html', context)
 
@@ -510,3 +520,27 @@ def delete_account(request):
             messages.error(request, '❌ Incorrect password. Account not deleted.')
             return redirect('profile')
     return redirect('profile')
+
+@require_POST
+def set_timezone(request):
+    """
+    Called by tz-detect.js (see base.html) with the browser's IANA timezone
+    name. Saves it on the logged-in user's profile (so backend logic —
+    streaks, daily resets, deadlines — uses it via UserTimezoneMiddleware),
+    and always sets a `tz` cookie too, so anonymous users and the very first
+    page load before login also get correct local-time display.
+    """
+    tz_name = request.POST.get("tz", "").strip()
+ 
+    try:
+        zoneinfo.ZoneInfo(tz_name)  # validates it's a real IANA name
+    except Exception:
+        return JsonResponse({"ok": False, "error": "invalid timezone"}, status=400)
+ 
+    if request.user.is_authenticated and request.user.timezone != tz_name:
+        request.user.timezone = tz_name
+        request.user.save(update_fields=["timezone"])
+ 
+    response = JsonResponse({"ok": True, "tz": tz_name})
+    response.set_cookie("tz", tz_name, max_age=60 * 60 * 24 * 365, samesite="Lax")
+    return response

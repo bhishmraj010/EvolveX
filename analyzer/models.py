@@ -42,12 +42,13 @@ class AnalyzerReport(models.Model):
     prediction_text = models.TextField(blank=True)
     summary_text = models.TextField(blank=True)
 
-    # --- Per-section reports (Todo, Willpower, Diet, Roadmap, Boss Fight) ---
+    # --- Per-section reports (Todo, Willpower, Diet, Journal, Roadmap, Boss Fight) ---
     # Each stores a dict shaped like the SectionReport schema in gemini_service.py:
     # {score, grade, verdict, good_patterns, bad_patterns, insights, recommendations, risk_pct}
     todo_report = models.JSONField(default=dict, blank=True)
     willpower_report = models.JSONField(default=dict, blank=True)
     diet_report = models.JSONField(default=dict, blank=True)
+    journal_report = models.JSONField(default=dict, blank=True)
     roadmap_report = models.JSONField(default=dict, blank=True)   # AI-predicted, no dedicated tracking model
     boss_fight_report = models.JSONField(default=dict, blank=True)
 
@@ -91,6 +92,12 @@ class AnalyzerReport(models.Model):
     prompt_tokens = models.PositiveIntegerField(default=0)
     completion_tokens = models.PositiveIntegerField(default=0)
     is_cached = models.BooleanField(default=False)
+
+    # Snapshot hash of raw activity counts (tasks/journal/diet/willpower/boss)
+    # at generation time. Lets us detect that fresh data has arrived (e.g. a
+    # new journal entry) even while still inside the time-based cache window,
+    # so we don't keep serving a stale "0 entries today" report.
+    activity_fingerprint = models.CharField(max_length=64, blank=True, default="")
 
     class Meta:
         ordering = ["-generated_at"]

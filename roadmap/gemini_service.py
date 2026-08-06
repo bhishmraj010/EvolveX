@@ -22,6 +22,39 @@ MIN_PHASES = 5
 MAX_PHASES = 10
 
 
+def _phase_budget(total_days):
+    """
+    Returns (min_phases, max_phases) sized to how many days the learner
+    actually gave us — NOT a fixed 5-10 regardless of timeframe. A 7-day
+    goal doesn't need the same phase count as a 6-month one; forcing 5-10
+    phases onto a short deadline is what was making short roadmaps feel
+    bloated/overcomplicated.
+
+    total_days=None means the learner gave no deadline — fall back to the
+    original unconstrained 5-10 range and let the AI use its judgement.
+    """
+    if not total_days or total_days <= 0:
+        return MIN_PHASES, MAX_PHASES
+    if total_days <= 7:
+        return 2, 3
+    if total_days <= 14:
+        return 3, 4
+    if total_days <= 30:
+        return 4, 6
+    if total_days <= 60:
+        return 5, 8
+    return MIN_PHASES, MAX_PHASES
+
+
+def _roadmap_total_days(roadmap):
+    """Days between today and the learner's target_deadline, or None if no
+    deadline was set (open-ended roadmap)."""
+    if not roadmap.target_deadline:
+        return None
+    days = (roadmap.target_deadline - timezone.now().date()).days
+    return days if days > 0 else None
+
+
 # ---------- Pydantic response schemas ----------
 class ClarifyingQuestionSchema(BaseModel):
     question: str
@@ -152,6 +185,24 @@ No markdown, no extra text, JSON only."""
 
 def _build_roadmap_prompt(roadmap, carry_forward_note=""):
     deadline_str = roadmap.target_deadline.isoformat() if roadmap.target_deadline else "no fixed deadline"
+    total_days = _roadmap_total_days(roadmap)
+    min_phases, max_phases = _phase_budget(total_days)
+
+    if total_days:
+        duration_instruction = (
+            f"The learner gave a target deadline that is exactly {total_days} days away. "
+            f"Break the goal into {min_phases}-{max_phases} logical, ordered phases — keep it "
+            f"SIMPLE and proportional to a {total_days}-day timeframe, don't over-engineer it. "
+            f"The duration_days of every phase, ADDED TOGETHER, MUST sum to exactly {total_days} "
+            f"days — not more, not less. Do not pad with extra phases or extra days just to fill "
+            f"a template; a short deadline should produce a short, focused roadmap."
+        )
+    else:
+        duration_instruction = (
+            f"No fixed deadline was given. Break the goal into {min_phases}-{max_phases} logical, "
+            f"ordered phases sized realistically for {roadmap.daily_minutes} min/day."
+        )
+
     return f"""You are a Senior Product Designer, AI Engineer, and Learning Scientist building the
 AI Roadmap engine for EvolveX, a gamified self-improvement platform. Generate a COMPLETE,
 personalized learning roadmap from scratch for the goal below. Think Duolingo skill trees +
@@ -167,9 +218,8 @@ Preferred language: {roadmap.preferred_language}
 Budget: {roadmap.get_budget_display()}
 {carry_forward_note}
 
-Break the goal into {MIN_PHASES}-{MAX_PHASES} logical, ordered phases (e.g. for "Learn Python":
-Basics -> OOP -> File Handling -> Modules -> Projects -> Django -> REST APIs -> Deployment ->
-Interview Prep). Each phase must build on the previous one and end with a checkpoint the learner
+{duration_instruction}
+Each phase must build on the previous one and end with a checkpoint the learner
 must clear before unlocking the next phase.
 
 Also recommend learning resources (YouTube channels, official documentation, books, courses,
@@ -281,6 +331,34 @@ def generate_clarifying_questions(draft):
 
 
 # ---------- Public API: full roadmap generation ----------
+def _rescale_phase_durations(phases_data, total_days):
+    """
+    Server-side safety net: even with the prompt constraint above, the AI can
+    still return a duration total that doesn't match the learner's deadline.
+    If it's off, proportionally rescale every phase's duration_days so the
+    roadmap always adds up to exactly what the learner asked for, instead of
+    silently running longer (or shorter) than their chosen timeframe.
+    """
+    if not total_days or not phases_data:
+        return phases_data
+
+    current_total = sum(p["duration_days"] for p in phases_data)
+    if current_total == 0 or current_total == total_days:
+        return phases_data
+
+    ratio = total_days / current_total
+    running = 0
+    for i, p in enumerate(phases_data):
+        if i == len(phases_data) - 1:
+            # last phase absorbs any rounding remainder so the sum is exact
+            p["duration_days"] = max(1, total_days - running)
+        else:
+            scaled = max(1, round(p["duration_days"] * ratio))
+            p["duration_days"] = scaled
+            running += scaled
+    return phases_data
+
+
 def generate_roadmap(roadmap, carry_forward_note=""):
     """
     Populate `roadmap` (already saved, no phases yet) with AI-generated
@@ -288,6 +366,9 @@ def generate_roadmap(roadmap, carry_forward_note=""):
     On failure, marks roadmap.generation_failed and leaves it phase-less so
     the view can show a retry option.
     """
+    total_days = _roadmap_total_days(roadmap)
+    _, max_phases_for_this_roadmap = _phase_budget(total_days)
+
     prompt = _build_roadmap_prompt(roadmap, carry_forward_note)
     result, pt, ct = _call_gemini(prompt, RoadmapGenerationResponse)
 
@@ -299,7 +380,8 @@ def generate_roadmap(roadmap, carry_forward_note=""):
         roadmap.save(update_fields=["prompt_tokens", "completion_tokens", "generation_failed"])
         return False
 
-    phases_data = result["phases"][:MAX_PHASES] or []
+    phases_data = result["phases"][:max_phases_for_this_roadmap] or []
+    phases_data = _rescale_phase_durations(phases_data, total_days)
     created_phases = []
     for i, p in enumerate(phases_data):
         phase = RoadmapPhase.objects.create(

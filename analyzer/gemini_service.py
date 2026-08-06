@@ -7,6 +7,7 @@ and actionable opportunities. Uses Pydantic for response validation.
 from collections import Counter
 from datetime import timedelta
 from typing import List, Dict, Union, Optional
+import hashlib
 import json
 import logging
 
@@ -32,7 +33,7 @@ class Opportunity(BaseModel):
 
 class SectionReport(BaseModel):
     """One self-contained mini-report for a single life area (Todo, Willpower,
-    Diet, Roadmap, or Boss Fight). Roadmap has no dedicated tracking data —
+    Diet, Journal, Roadmap, or Boss Fight). Roadmap has no dedicated tracking data —
     for that section the model must infer/predict purely from level, XP,
     and the other sections' trajectory."""
     score: conint(ge=0, le=100)
@@ -50,10 +51,11 @@ class AnalyzerResponse(BaseModel):
     todo_report: SectionReport
     willpower_report: SectionReport
     diet_report: SectionReport
+    journal_report: SectionReport
     roadmap_report: SectionReport
     boss_fight_report: SectionReport
 
-    # ---- Combined / overall analysis (built from all 5 sections above) ----
+    # ---- Combined / overall analysis (built from all sections above) ----
     verdict: str
     summary: str
     confidence_score: conint(ge=0, le=100)
@@ -149,7 +151,7 @@ def aggregate_user_data(user, report_type="weekly", previous_reports=None):
             on_target = diet_qs.filter(day_status="win").count()
             diet_adherence_pct = round(on_target / diet_qs.count() * 100)
     except Exception:
-        pass
+        logger.exception("Diet aggregation failed (analyzer will show 0/blank diet data)")
 
     # ---- Willpower ----
     willpower_total = willpower_completed = willpower_skipped = 0
@@ -160,7 +162,55 @@ def aggregate_user_data(user, report_type="weekly", previous_reports=None):
         willpower_completed = wp_qs.filter(status="completed").count()
         willpower_skipped = wp_qs.filter(status="skipped").count()
     except Exception:
-        pass
+        logger.exception("Willpower aggregation failed (analyzer will show 0/blank willpower data)")
+
+    # ---- Journal ----
+    # Model: JournalEntry lives in the `home` app — fields: user, date, entry_text,
+    # ai_response, ai_suggestions, ai_mood_tag (AI-assigned, not user-input),
+    # ai_generated_at. One entry per user per day (date is effectively unique).
+    journal_entries_count = 0
+    journal_days_written = 0
+    journal_avg_words = 0
+    journal_current_streak = 0
+    journal_dominant_mood = None
+    journal_ai_reflection_rate = 0
+    try:
+        from home.models import JournalEntry
+
+        journal_qs = JournalEntry.objects.filter(user=user, date__gte=since)
+        journal_entries_count = journal_qs.count()
+        journal_days_written = journal_qs.values("date").distinct().count()
+
+        if journal_entries_count:
+            total_words = sum(
+                len((e.entry_text or "").split()) for e in journal_qs.only("entry_text")
+            )
+            journal_avg_words = round(total_words / journal_entries_count)
+
+            # How often the AI reflection actually landed (ai_response non-empty)
+            with_reflection = journal_qs.exclude(ai_response="").count()
+            journal_ai_reflection_rate = round(with_reflection / journal_entries_count * 100)
+
+        # Dominant AI-assigned mood tag for the period
+        mood_tags = list(
+            journal_qs.exclude(ai_mood_tag="").values_list("ai_mood_tag", flat=True)
+        )
+        if mood_tags:
+            journal_dominant_mood = Counter(mood_tags).most_common(1)[0][0]
+
+        # Streak: consecutive days with an entry, counting back from today
+        all_journal_dates = set(
+            JournalEntry.objects.filter(user=user).values_list("date", flat=True)
+        )
+        cursor = timezone.now().date()
+        while cursor in all_journal_dates:
+            journal_current_streak += 1
+            cursor -= timedelta(days=1)
+    except Exception:
+        # THIS was silently swallowing errors before (bare `except Exception: pass`),
+        # so if `journal.models` import path is wrong, or a field name doesn't match,
+        # journal_* stayed at 0/None with zero trace in the logs. Now it logs.
+        logger.exception("Journal aggregation failed (analyzer will show 0/blank journal data) — check app label / field names on JournalEntry")
 
     # ---- Boss battles ----
     bosses_defeated = BossDefeat.objects.filter(
@@ -198,10 +248,35 @@ def aggregate_user_data(user, report_type="weekly", previous_reports=None):
         "willpower_total": willpower_total,
         "willpower_completed": willpower_completed,
         "willpower_skipped": willpower_skipped,
+        "journal_entries_count": journal_entries_count,
+        "journal_days_written": journal_days_written,
+        "journal_avg_words": journal_avg_words,
+        "journal_current_streak": journal_current_streak,
+        "journal_dominant_mood": journal_dominant_mood,
         "bosses_defeated": bosses_defeated,
         "boss_challenges_completed": challenges_completed,
         "prev_evolution_scores": prev_evolution_scores,  # for Gemini to see trend
     }
+
+
+# ---------- Freshness fingerprint ----------
+def _compute_fingerprint(summary):
+    """
+    Cheap hash of the raw activity counts that feed the report. If this
+    changes since the cached report was generated — e.g. the user just wrote
+    a journal entry, completed a task, logged a meal — we know the cached
+    report is out of date even if it's still inside its time-based cache
+    window, and we should regenerate instead of serving stale numbers.
+    """
+    fingerprint_source = "|".join(str(summary.get(key)) for key in [
+        "tasks_total", "tasks_completed", "tasks_skipped", "overdue_tasks",
+        "win_days", "survive_days", "lose_days",
+        "diet_adherence_pct",
+        "willpower_total", "willpower_completed", "willpower_skipped",
+        "journal_entries_count", "journal_days_written", "journal_current_streak",
+        "bosses_defeated", "boss_challenges_completed",
+    ])
+    return hashlib.md5(fingerprint_source.encode("utf-8")).hexdigest()
 
 
 # ---------- Prompt Construction ----------
@@ -214,8 +289,8 @@ Analyze the user's {summary['report_type']} activity summary (last {summary['per
 Your analysis must be deep, actionable, and personalized.
 
 You must produce TWO layers of analysis:
-LAYER 1 — five independent SECTION REPORTS, one per life area, each scored and reasoned about on its own.
-LAYER 2 — one COMBINED OVERALL ANALYSIS that synthesizes all five section reports together (this is the
+LAYER 1 — six independent SECTION REPORTS, one per life area, each scored and reasoned about on its own.
+LAYER 2 — one COMBINED OVERALL ANALYSIS that synthesizes all six section reports together (this is the
 existing "AI Verdict / Evolution Score / Patterns / Risks / Prediction" analysis — build it FROM the section
 reports below, not independently).
 
@@ -229,11 +304,14 @@ DATA (all numbers, no personal text):
 - Current win streak: {summary['current_win_streak']} days, lose streak: {summary['current_lose_streak']} days
 - Diet adherence: {summary['diet_adherence_pct']}% (null = not tracked)
 - Willpower tasks: {summary['willpower_completed']}/{summary['willpower_total']} completed, {summary['willpower_skipped']} skipped
+- Journal: {summary['journal_entries_count']} entries in {summary['period_days']} days, written on {summary['journal_days_written']} distinct days
+- Journal avg words/entry: {summary['journal_avg_words']}, current writing streak: {summary['journal_current_streak']} days
+- Journal dominant mood: {summary['journal_dominant_mood']} (null = not tracked)
 - Boss battles: {summary['bosses_defeated']} bosses defeated, {summary['boss_challenges_completed']} challenges completed
 - Previous evolution scores (same report type): {prev_trend}
 
 Note: there is no dedicated "roadmap" tracking data above. For the roadmap_report, infer/predict the user's
-trajectory purely from level, XP, and how the other four sections are trending — be explicit that it's a
+trajectory purely from level, XP, and how the other five sections are trending — be explicit that it's a
 forward-looking projection, not a measurement.
 
 Return ONLY a valid JSON object (no markdown, no extra text) with this exact structure:
@@ -242,6 +320,7 @@ Return ONLY a valid JSON object (no markdown, no extra text) with this exact str
   "todo_report": {{ ...SectionReport for Task/Todo Tracker... }},
   "willpower_report": {{ ...SectionReport for Willpower Tracker... }},
   "diet_report": {{ ...SectionReport for Diet Tracker... }},
+  "journal_report": {{ ...SectionReport for Journal... }},
   "roadmap_report": {{ ...SectionReport, predictive, for level/XP Roadmap... }},
   "boss_fight_report": {{ ...SectionReport for Boss Battles... }},
 
@@ -257,8 +336,8 @@ Return ONLY a valid JSON object (no markdown, no extra text) with this exact str
   "recommendations": [...], "prediction": ...
 }}
 
-Each SectionReport object (todo_report / willpower_report / diet_report / roadmap_report / boss_fight_report)
-must have exactly these fields:
+Each SectionReport object (todo_report / willpower_report / diet_report / journal_report / roadmap_report /
+boss_fight_report) must have exactly these fields:
 - score: (int 0-100) health of this area specifically.
 - grade: (string) one of "S", "A", "B", "C", "D".
 - verdict: (string) ONE sentence, max 20 words. Honest summary of THIS area only. No second sentence.
@@ -268,6 +347,10 @@ must have exactly these fields:
 - recommendations: (list of strings) 1-3 concrete next actions for this area.
 - risk_pct: (int 0-100) likelihood this area regresses in the next period.
 
+For the journal_report specifically: judge consistency (entries per week, streak), depth (avg words —
+very low word counts are a bad pattern), and mood trend if mood data is present. If entries_count is 0,
+say so plainly and treat it as a bad pattern, not a neutral one.
+
 For the combined/overall fields (verdict, summary, confidence_score, discipline_score, productivity_score,
 focus_score, evolution_score, hidden_patterns, success_patterns, failure_patterns, opportunities,
 best_opportunity, burnout_risk, streak_break_risk, goal_failure_risk, productivity_decline_risk,
@@ -276,7 +359,7 @@ trend_summary, evolution_grade, insights, root_causes, recommendations, predicti
 definitions as before:
 
 - verdict: (string) 2 sentences MAX, each under 20 words. Overall performance and trajectory, synthesized
-  across all five sections. No more than 2 sentences, ever.
+  across all six sections. No more than 2 sentences, ever.
 - summary: (string) ONE sentence, max 15 words. Headline for this {summary['report_type']} report
   (shown at the top of the page).
 - confidence_score: (int 0-100) How confident are you in this analysis? Base this on data richness and
@@ -345,19 +428,38 @@ def get_or_create_report(user, report_type="weekly", force_refresh=False):
     """
     Serve cached report if fresh; otherwise call Gemini to generate a new one.
     On failure, fallback to last cached report of same type (FR-AN-07).
+
+    IMPORTANT: freshness is checked two ways, not just the time window.
+    `is_stale()` alone used to let a report sit "valid" for up to 12/24/72
+    hours even if the user logged brand-new activity (e.g. a journal entry)
+    minutes after the report was generated — so the UI kept showing
+    "0 entries today" even though an entry existed. We now always pull a
+    cheap fingerprint of the current activity counts and compare it to the
+    fingerprint stored on the cached report; a mismatch forces a refresh
+    regardless of how much time has passed.
     """
     latest = AnalyzerReport.objects.filter(user=user, report_type=report_type).first()
-
-    if latest and not latest.is_stale() and not force_refresh:
-        AnalyzerRunLog.objects.create(user=user, cache_hit=True, succeeded=True)
-        return latest, True
 
     # Gather previous reports for trend (up to 5)
     previous_reports = list(AnalyzerReport.objects.filter(
         user=user, report_type=report_type
     ).exclude(pk=latest.pk if latest else None).order_by("-generated_at")[:5]) if latest else []
 
+    # Aggregation is cheap (plain DB counts, no Gemini call) so we always run
+    # it — this is what lets us detect "new data since cache was generated".
     summary = aggregate_user_data(user, report_type, previous_reports)
+    current_fingerprint = _compute_fingerprint(summary)
+
+    cache_is_fresh = (
+        latest
+        and not force_refresh
+        and not latest.is_stale()
+        and latest.activity_fingerprint == current_fingerprint
+    )
+    if cache_is_fresh:
+        AnalyzerRunLog.objects.create(user=user, cache_hit=True, succeeded=True)
+        return latest, True
+
     prompt = _build_prompt(summary)
 
     try:
@@ -373,6 +475,7 @@ def get_or_create_report(user, report_type="weekly", force_refresh=False):
             todo_report=result.get("todo_report", {}),
             willpower_report=result.get("willpower_report", {}),
             diet_report=result.get("diet_report", {}),
+            journal_report=result.get("journal_report", {}),
             roadmap_report=result.get("roadmap_report", {}),
             boss_fight_report=result.get("boss_fight_report", {}),
             discipline_score=result.get("discipline_score", 0),
@@ -406,6 +509,7 @@ def get_or_create_report(user, report_type="weekly", force_refresh=False):
             prompt_tokens=pt,
             completion_tokens=ct,
             is_cached=False,
+            activity_fingerprint=current_fingerprint,
         )
         AnalyzerRunLog.objects.create(
             user=user, cache_hit=False, succeeded=True,

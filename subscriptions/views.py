@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import traceback
 
 import requests
 from django.conf import settings
@@ -53,85 +54,111 @@ def subscription_success_view(request):
 @login_required
 @require_POST
 def create_razorpay_order(request):
-    plan_code = request.POST.get("plan_code")
-    if plan_code not in PLANS:
-        return JsonResponse({"error": "Invalid plan"}, status=400)
+    # --- DEBUG: remove these prints once the issue is found ---
+    print("=== RAZORPAY DEBUG ===")
+    print("RAZORPAY_KEY_ID present:", bool(getattr(settings, "RAZORPAY_KEY_ID", None)))
+    print("RAZORPAY_KEY_SECRET present:", bool(getattr(settings, "RAZORPAY_KEY_SECRET", None)))
+    print("POST data:", dict(request.POST))
+    # -----------------------------------------------------------
 
-    # Razorpay here is India-only. If the detected currency isn't INR,
-    # tell the frontend to fall back to the PayPal flow instead.
-    currency = get_pricing_currency(request, phone_number=_user_phone(request))
-    if currency != "INR":
-        return JsonResponse(
-            {"error": "Razorpay is only available for India. Use PayPal for USD."},
-            status=400,
-        )
-
-    plan = get_plan_context(plan_code, currency="INR")
-    amount_paise = int(round(plan["price"] * 100))
-
-    import razorpay
-    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
     try:
+        plan_code = request.POST.get("plan_code")
+        if plan_code not in PLANS:
+            return JsonResponse({"error": "Invalid plan"}, status=400)
+
+        # Razorpay here is India-only. If the detected currency isn't INR,
+        # tell the frontend to fall back to the PayPal flow instead.
+        currency = get_pricing_currency(request, phone_number=_user_phone(request))
+        if currency != "INR":
+            return JsonResponse(
+                {"error": "Razorpay is only available for India. Use PayPal for USD."},
+                status=400,
+            )
+
+        if not getattr(settings, "RAZORPAY_KEY_ID", None) or not getattr(settings, "RAZORPAY_KEY_SECRET", None):
+            print("[ERROR] Razorpay keys missing from settings/env")
+            return JsonResponse(
+                {"error": "Payment gateway not configured. Contact support."},
+                status=500,
+            )
+
+        plan = get_plan_context(plan_code, currency="INR")
+        amount_paise = int(round(plan["price"] * 100))
+
+        import razorpay
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+
         order = client.order.create({
             "amount": amount_paise,
             "currency": "INR",
             "payment_capture": 1,
             "notes": {"user_id": str(request.user.id), "plan_code": plan_code},
         })
+
+        sub = UserSubscription.objects.create(
+            user=request.user,
+            plan_code=plan_code,
+            is_lifetime=plan["effective_is_lifetime"],
+            duration_days=plan["effective_duration_days"],
+            currency="INR",
+            amount=plan["price"],
+            gateway="razorpay",
+            gateway_order_id=order["id"],
+            status="pending",
+        )
+
+        return JsonResponse({
+            "order_id": order["id"],
+            "amount": amount_paise,
+            "currency": "INR",
+            "key": settings.RAZORPAY_KEY_ID,
+            "subscription_id": sub.id,
+        })
+
     except Exception as e:
-        print(f"[ERROR] Razorpay order create: {e}")
-        return JsonResponse({"error": "Could not create order"}, status=500)
-
-    sub = UserSubscription.objects.create(
-        user=request.user,
-        plan_code=plan_code,
-        is_lifetime=plan["effective_is_lifetime"],
-        duration_days=plan["effective_duration_days"],
-        currency="INR",
-        amount=plan["price"],
-        gateway="razorpay",
-        gateway_order_id=order["id"],
-        status="pending",
-    )
-
-    return JsonResponse({
-        "order_id": order["id"],
-        "amount": amount_paise,
-        "currency": "INR",
-        "key": settings.RAZORPAY_KEY_ID,
-        "subscription_id": sub.id,
-    })
+        print(f"[ERROR] Razorpay order create failed: {e}")
+        traceback.print_exc()
+        return JsonResponse({"error": f"Could not create order: {str(e)}"}, status=500)
 
 
 @login_required
 @require_POST
 def verify_razorpay_payment(request):
-    order_id = request.POST.get("razorpay_order_id")
-    payment_id = request.POST.get("razorpay_payment_id")
-    signature = request.POST.get("razorpay_signature")
+    try:
+        order_id = request.POST.get("razorpay_order_id")
+        payment_id = request.POST.get("razorpay_payment_id")
+        signature = request.POST.get("razorpay_signature")
 
-    sub = UserSubscription.objects.filter(
-        user=request.user, gateway_order_id=order_id, gateway="razorpay"
-    ).first()
-    if not sub:
-        return JsonResponse({"error": "Subscription not found"}, status=404)
+        if not all([order_id, payment_id, signature]):
+            return JsonResponse({"error": "Missing payment verification fields"}, status=400)
 
-    expected_signature = hmac.new(
-        settings.RAZORPAY_KEY_SECRET.encode(),
-        f"{order_id}|{payment_id}".encode(),
-        hashlib.sha256,
-    ).hexdigest()
+        sub = UserSubscription.objects.filter(
+            user=request.user, gateway_order_id=order_id, gateway="razorpay"
+        ).first()
+        if not sub:
+            return JsonResponse({"error": "Subscription not found"}, status=404)
 
-    if expected_signature != signature:
-        sub.status = "failed"
-        sub.save()
-        return JsonResponse({"error": "Signature verification failed"}, status=400)
+        expected_signature = hmac.new(
+            settings.RAZORPAY_KEY_SECRET.encode(),
+            f"{order_id}|{payment_id}".encode(),
+            hashlib.sha256,
+        ).hexdigest()
 
-    sub.gateway_payment_id = payment_id
-    sub.activate()
-    _queue_subscription_popup(request, sub)
+        if expected_signature != signature:
+            sub.status = "failed"
+            sub.save()
+            return JsonResponse({"error": "Signature verification failed"}, status=400)
 
-    return JsonResponse({"success": True, "redirect": "/subscriptions/success/"})
+        sub.gateway_payment_id = payment_id
+        sub.activate()
+        _queue_subscription_popup(request, sub)
+
+        return JsonResponse({"success": True, "redirect": "/subscriptions/success/"})
+
+    except Exception as e:
+        print(f"[ERROR] Razorpay payment verify failed: {e}")
+        traceback.print_exc()
+        return JsonResponse({"error": f"Verification failed: {str(e)}"}, status=500)
 
 
 # ── PayPal (USD only) ──────────────────────────────────────────────────────
@@ -159,16 +186,23 @@ def _paypal_access_token():
 @login_required
 @require_POST
 def create_paypal_order(request):
-    plan_code = request.POST.get("plan_code")
-    if plan_code not in PLANS:
-        return JsonResponse({"error": "Invalid plan"}, status=400)
-
-    # PayPal always charges USD — this is the international path regardless
-    # of what get_pricing_currency() says, so an India user can still opt
-    # into it manually if they want (e.g. no Indian card).
-    plan = get_plan_context(plan_code, currency="USD")
-
     try:
+        plan_code = request.POST.get("plan_code")
+        if plan_code not in PLANS:
+            return JsonResponse({"error": "Invalid plan"}, status=400)
+
+        if not getattr(settings, "PAYPAL_CLIENT_ID", None) or not getattr(settings, "PAYPAL_CLIENT_SECRET", None):
+            print("[ERROR] PayPal keys missing from settings/env")
+            return JsonResponse(
+                {"error": "Payment gateway not configured. Contact support."},
+                status=500,
+            )
+
+        # PayPal always charges USD — this is the international path regardless
+        # of what get_pricing_currency() says, so an India user can still opt
+        # into it manually if they want (e.g. no Indian card).
+        plan = get_plan_context(plan_code, currency="USD")
+
         token = _paypal_access_token()
         resp = requests.post(
             f"{_paypal_base_url()}/v2/checkout/orders",
@@ -184,36 +218,41 @@ def create_paypal_order(request):
         )
         resp.raise_for_status()
         order = resp.json()
+
+        UserSubscription.objects.create(
+            user=request.user,
+            plan_code=plan_code,
+            is_lifetime=plan["effective_is_lifetime"],
+            duration_days=plan["effective_duration_days"],
+            currency="USD",
+            amount=plan["price"],
+            gateway="paypal",
+            gateway_order_id=order["id"],
+            status="pending",
+        )
+
+        return JsonResponse({"order_id": order["id"]})
+
     except Exception as e:
-        print(f"[ERROR] PayPal order create: {e}")
-        return JsonResponse({"error": "Could not create PayPal order"}, status=500)
-
-    UserSubscription.objects.create(
-        user=request.user,
-        plan_code=plan_code,
-        is_lifetime=plan["effective_is_lifetime"],
-        duration_days=plan["effective_duration_days"],
-        currency="USD",
-        amount=plan["price"],
-        gateway="paypal",
-        gateway_order_id=order["id"],
-        status="pending",
-    )
-
-    return JsonResponse({"order_id": order["id"]})
+        print(f"[ERROR] PayPal order create failed: {e}")
+        traceback.print_exc()
+        return JsonResponse({"error": f"Could not create PayPal order: {str(e)}"}, status=500)
 
 
 @login_required
 @require_POST
 def capture_paypal_order(request):
-    order_id = request.POST.get("order_id")
-    sub = UserSubscription.objects.filter(
-        user=request.user, gateway_order_id=order_id, gateway="paypal"
-    ).first()
-    if not sub:
-        return JsonResponse({"error": "Subscription not found"}, status=404)
-
     try:
+        order_id = request.POST.get("order_id")
+        if not order_id:
+            return JsonResponse({"error": "Missing order_id"}, status=400)
+
+        sub = UserSubscription.objects.filter(
+            user=request.user, gateway_order_id=order_id, gateway="paypal"
+        ).first()
+        if not sub:
+            return JsonResponse({"error": "Subscription not found"}, status=404)
+
         token = _paypal_access_token()
         resp = requests.post(
             f"{_paypal_base_url()}/v2/checkout/orders/{order_id}/capture",
@@ -221,19 +260,19 @@ def capture_paypal_order(request):
             timeout=15,
         )
         result = resp.json()
+
+        if resp.status_code not in (200, 201) or result.get("status") != "COMPLETED":
+            sub.status = "failed"
+            sub.save()
+            return JsonResponse({"error": "Payment not completed"}, status=400)
+
+        sub.gateway_payment_id = result.get("id", order_id)
+        sub.activate()
+        _queue_subscription_popup(request, sub)
+
+        return JsonResponse({"success": True, "redirect": "/subscriptions/success/"})
+
     except Exception as e:
-        print(f"[ERROR] PayPal capture: {e}")
-        sub.status = "failed"
-        sub.save()
-        return JsonResponse({"error": "Could not capture payment"}, status=500)
-
-    if resp.status_code not in (200, 201) or result.get("status") != "COMPLETED":
-        sub.status = "failed"
-        sub.save()
-        return JsonResponse({"error": "Payment not completed"}, status=400)
-
-    sub.gateway_payment_id = result.get("id", order_id)
-    sub.activate()
-    _queue_subscription_popup(request, sub)
-
-    return JsonResponse({"success": True, "redirect": "/subscriptions/success/"})
+        print(f"[ERROR] PayPal capture failed: {e}")
+        traceback.print_exc()
+        return JsonResponse({"error": f"Could not capture payment: {str(e)}"}, status=500)

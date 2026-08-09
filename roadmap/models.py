@@ -172,8 +172,18 @@ class Roadmap(models.Model):
         mission_xp = sum(
             m.xp_reward for m in self.daily_missions.filter(status="completed")
         )
-        self.xp_earned = phase_xp + mission_xp
-        self.xp_total_available = sum(p.xp_reward for p in phases)
+        # Checkpoint XP is awarded separately (RoadmapCheckpoint.clear()) but
+        # was missing from this total, so the roadmap's displayed XP used to
+        # fall behind the user's actual total_xp by 50+ points per phase
+        # cleared. Include it so the two numbers stay in sync.
+        checkpoint_xp = sum(
+            c.xp_reward for c in RoadmapCheckpoint.objects.filter(phase__in=phases, is_completed=True)
+        )
+        self.xp_earned = phase_xp + mission_xp + checkpoint_xp
+        checkpoint_total_available = sum(
+            c.xp_reward for c in RoadmapCheckpoint.objects.filter(phase__in=phases)
+        )
+        self.xp_total_available = sum(p.xp_reward for p in phases) + checkpoint_total_available
         if self.overall_completion_pct >= 100 and self.status == "active":
             self.status = "completed"
         self.save(update_fields=[

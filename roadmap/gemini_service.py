@@ -143,6 +143,10 @@ class DailyMissionResponse(BaseModel):
     adaptive_note: str = ""
 
 
+XP_PER_TASK = 5  # every mission sub-task is worth a flat 5 XP — total mission
+                  # XP is always task_count * XP_PER_TASK, never AI-decided
+
+
 # ---------- Prompt construction ----------
 def _difficulty_label(level):
     return dict(Roadmap.SKILL_LEVELS).get(level, level)
@@ -534,7 +538,7 @@ def get_or_create_daily_mission(roadmap, target_date=None):
             date=target_date,
             tasks=cache["tasks"],
             estimated_minutes=cache["estimated_minutes"],
-            xp_reward=cache["xp_reward"],
+            xp_reward=len(cache["tasks"]) * XP_PER_TASK,
             was_adaptive=cache.get("was_adaptive", False),
             adaptive_note=cache.get("adaptive_note", ""),
         )
@@ -556,7 +560,7 @@ def get_or_create_daily_mission(roadmap, target_date=None):
         date=target_date,
         tasks=[{**t, "completed": False} for t in result["tasks"]],
         estimated_minutes=total_minutes,
-        xp_reward=result["xp_reward"],
+        xp_reward=len(result["tasks"]) * XP_PER_TASK,
         was_adaptive=adaptive_ctx["state"] != "steady",
         adaptive_note=result.get("adaptive_note", ""),
     )

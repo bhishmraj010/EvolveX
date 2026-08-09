@@ -5,7 +5,10 @@
 <div style="max-width:850px;margin:0 auto;">
 
   <div style="text-align:center;margin-bottom:2.5rem;">
-    <h1 style="font-size:2.2rem;color:var(--accent);margin-bottom:0.5rem;">🥗 Diet Tracker Setup</h1>
+    <h1 style="font-size:2.2rem;color:var(--accent);margin-bottom:0.5rem;display:flex;align-items:center;justify-content:center;gap:0.6rem;">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+      Diet Tracker Setup
+    </h1>
     <p style="color:var(--text-secondary);font-size:1rem;">Choose your physique goal — AI will build a personalized plan for you.</p>
   </div>
 
@@ -14,7 +17,19 @@
     <a href="{% url 'diet_onboarding_details' %}?goal={{ key }}"
        class="physique-card"
        style="--card-color:{{ card.color }};">
-      <div class="physique-card-emoji">{{ card.emoji }}</div>
+      <div class="physique-card-emoji">
+        {% if "lose" in key %}
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+        {% elif "gain" in key %}
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        {% elif "maintain" in key %}
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/></svg>
+        {% elif key == "custom" %}
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+        {% else %}
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+        {% endif %}
+      </div>
       <div class="physique-card-title">{{ card.title }}</div>
       <div class="physique-card-desc">{{ card.desc }}</div>
       <div class="physique-card-arrow">Select →</div>
@@ -52,9 +67,11 @@
 }
 .physique-card:hover::before { opacity: 0.06; }
 .physique-card-emoji {
-  font-size: 3rem;
+  color: var(--card-color);
   margin-bottom: 0.75rem;
   position: relative;
+  display: flex;
+  justify-content: center;
 }
 .physique-card-title {
   font-size: 1.1rem;

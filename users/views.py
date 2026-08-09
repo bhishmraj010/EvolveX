@@ -16,6 +16,7 @@ from django.http import JsonResponse
 
 from django.core.mail import send_mail
 from django.conf import settings
+from django.core.cache import cache
 from datetime import timedelta
 import json
 from .forms import (
@@ -26,6 +27,40 @@ from .achievements import get_badges
 
 OTP_VALID_SECONDS = 10 * 60  # 10 minutes
 OTP_MAX_ATTEMPTS = 5  # after this many wrong guesses, the code is invalidated
+
+# ── Login brute-force protection ──────────────────────────────────────
+LOGIN_MAX_ATTEMPTS = 5           # wrong password attempts allowed
+LOGIN_LOCKOUT_SECONDS = 15 * 60  # 15 minutes
+
+
+def _login_rate_limit_key(request, username):
+    """
+    Key on both IP and the attempted username/email, lowercased and
+    stripped. Keying on IP alone would let an attacker rotate usernames
+    freely; keying on username alone would let one IP hammer many
+    accounts, or let an attacker lock a victim out by deliberately
+    failing their login from a different IP. Combining both closes both
+    gaps while still letting normal users behind shared IPs (offices,
+    NAT) log in without tripping each other's limits.
+    """
+    ip = request.META.get('REMOTE_ADDR', 'unknown')
+    uname = (username or '').strip().lower()
+    return f'login_attempts:{ip}:{uname}'
+
+
+def _get_login_attempts(request, username):
+    return cache.get(_login_rate_limit_key(request, username), 0)
+
+
+def _register_failed_login(request, username):
+    key = _login_rate_limit_key(request, username)
+    attempts = cache.get(key, 0) + 1
+    cache.set(key, attempts, LOGIN_LOCKOUT_SECONDS)
+    return attempts
+
+
+def _clear_login_attempts(request, username):
+    cache.delete(_login_rate_limit_key(request, username))
 
 
 def _check_otp(request, entered_otp, otp_key, expiry_key, attempts_key):
@@ -74,9 +109,26 @@ def register_view(request):
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('reports_home')
+
+    # Look at the attempted username early so we can block before even
+    # validating the form — this way a locked-out attacker can't keep
+    # probing password guesses against the form itself.
+    attempted_username = (request.POST.get('username') or '').strip()
+
+    if request.method == 'POST' and attempted_username:
+        attempts = _get_login_attempts(request, attempted_username)
+        if attempts >= LOGIN_MAX_ATTEMPTS:
+            messages.error(
+                request,
+                f'Too many failed login attempts. Please try again in '
+                f'{LOGIN_LOCKOUT_SECONDS // 60} minutes.'
+            )
+            return render(request, 'users/login.html', {'form': LoginForm(request)})
+
     form = LoginForm(request, data=request.POST or None)
     if request.method == 'POST' and form.is_valid():
         user = form.get_user()
+        _clear_login_attempts(request, attempted_username)
         login(request, user)
         messages.success(request, f'Welcome back, {user.get_display_name()}! 🔥')
 
@@ -90,6 +142,18 @@ def login_view(request):
         ):
             return redirect(next_url)
         return redirect('reports_home')
+    elif request.method == 'POST' and attempted_username:
+        # Wrong credentials — count it. Note this only fires when the
+        # username field was actually filled in; an empty submit doesn't
+        # count against the lockout.
+        attempts = _register_failed_login(request, attempted_username)
+        remaining = max(0, LOGIN_MAX_ATTEMPTS - attempts)
+        if remaining > 0:
+            messages.error(
+                request,
+                f'Incorrect username or password. {remaining} attempt(s) '
+                f'remaining before your account is temporarily locked.'
+            )
     return render(request, 'users/login.html', {'form': form})
 
 

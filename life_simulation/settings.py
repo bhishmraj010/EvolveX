@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import dj_database_url
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,7 +22,7 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
-    "https://evolvex-i5ud.onrender.com",
+    "evolvex-i5ud.onrender.com",
 ]
 
 # Render sets this automatically at deploy time — covers the case where
@@ -32,7 +33,7 @@ if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://life-simulation-9bqz.onrender.com",
+    "https://evolvex-i5ud.onrender.com",
 ]
 if RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
@@ -112,12 +113,24 @@ WSGI_APPLICATION = "life_simulation.wsgi.application"
 # Database
 # ==========================
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=True,
+        )
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 # ==========================
 # User Model
@@ -171,10 +184,6 @@ FIREBASE_WEB_CONFIG = {
     "messagingSenderId": FIREBASE_MESSAGING_SENDER_ID,
     "appId": FIREBASE_APP_ID,
 }
-
-# Debug print at startup so you can immediately see in the terminal
-# whether these values loaded correctly (remove once confirmed working).
-print(f"[DEBUG] FIREBASE_PROJECT_ID = {FIREBASE_PROJECT_ID}")
 
 
 # ==========================
@@ -265,11 +274,24 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ── Temporary session/cookie settings for local testing ──
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
+# ── Cookie & transport security ──────────────────────────────────────
+# These must be True in production (HTTPS) so session/CSRF cookies can
+# never be sent over plain HTTP, and browsers are forced onto HTTPS.
+# They're tied to DEBUG so local development (plain http://127.0.0.1)
+# still works without cookies silently failing to be set.
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False  # must stay False: JS needs to read this token to send it back
+
+SECURE_SSL_REDIRECT = not DEBUG
+SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000  # 1 year, only once confirmed working on HTTPS
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
 
 # ── Fix for Firebase signInWithPopup ──────────────────────────────────
 # Django's SecurityMiddleware sends "Cross-Origin-Opener-Policy: same-origin"

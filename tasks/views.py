@@ -87,27 +87,8 @@ def recalculate_daily_points(user, log_date=None, request=None):
 
 
 def update_user_xp(user, request=None):
-    from django.db.models import Sum
-    total = DailyLog.objects.filter(
-        user=user, total_points__gt=0
-    ).aggregate(Sum('total_points'))['total_points__sum'] or 0
-
-    # Roadmap XP (DailyMission / RoadmapCheckpoint) is tracked on
-    # Roadmap.xp_earned, NOT via DailyLog — so without this it gets wiped
-    # out every time this function overwrites user.total_xp from the
-    # DailyLog aggregate above (e.g. on the very next normal task
-    # complete/skip). Fold it in here so the recompute stays idempotent
-    # AND roadmap XP survives.
-    try:
-        from roadmap.models import Roadmap
-        roadmap_total = Roadmap.objects.filter(user=user).aggregate(
-            Sum('xp_earned')
-        )['xp_earned__sum'] or 0
-        total += roadmap_total
-    except Exception:
-        pass
-
-    user.total_xp  = total
+    from life_simulation.xp_utils import recompute_total_xp
+    recompute_total_xp(user)
     penalized      = user.check_deadline_penalty()
     leveled_up     = user.check_level_up()
 

@@ -38,6 +38,15 @@ CSRF_TRUSTED_ORIGINS = [
 if RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
 
+# Render terminates HTTPS at its own proxy and forwards the request to
+# gunicorn as plain HTTP, adding an `X-Forwarded-Proto: https` header to
+# say so. Without this line, Django can't tell the original request was
+# HTTPS, so SECURE_SSL_REDIRECT below thinks every request is insecure
+# and keeps trying to redirect — which on a proxy like this causes a
+# redirect loop / crash instead of working normally. This tells Django
+# to trust that header from Render's proxy.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # ==========================
 # Applications
 # ==========================
@@ -344,3 +353,33 @@ RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "")
 PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "")
 PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET", "")
 PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox")  # "sandbox" while testing, "live" for real payments
+
+# ==========================
+# Logging
+# ==========================
+# Without this, unhandled exceptions in production (DEBUG=False) get
+# swallowed by gunicorn's access-log-only output — you'd only see the
+# "500" status line, never the actual Python traceback. This makes full
+# tracebacks show up in Render's Logs tab regardless of DEBUG, so you
+# don't need to flip DEBUG=True (and expose stack traces to visitors)
+# just to see what broke.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": True,
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "ERROR",
+    },
+}

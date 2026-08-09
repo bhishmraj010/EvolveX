@@ -27,13 +27,6 @@ from life_simulation.gemini_client import get_client
 # image-generation models (and their names) have moved fast; the old
 # Imagen `generate_images()` call is deprecated in favor of `generate_content()`
 # with one of these image-capable models.
-#
-# NOTE: confirmed against `python manage.py list_gemini_models` output for
-# this key. `gemini-2.5-flash-image` is listed as available but its free-tier
-# quota is 0 (429 RESOURCE_EXHAUSTED) — kept last as a longshot in case quota
-# is ever granted. Imagen models (imagen-4.0-*) are NOT included here because
-# they only support the `predict` action, not `generateContent`, so they need
-# a different API call than the one this command makes.
 IMAGE_MODEL_CANDIDATES = [
     "nano-banana-pro-preview",
     "gemini-3.1-flash-image",
@@ -43,6 +36,11 @@ IMAGE_MODEL_CANDIDATES = [
     "gemini-3.1-flash-lite-image",
     "gemini-2.5-flash-image",
 ]
+
+# Seconds to wait for a single model's response before giving up on it and
+# trying the next candidate. Without this, a slow/hanging network call could
+# block the command indefinitely with no way to Ctrl+C out on Windows.
+REQUEST_TIMEOUT_SECONDS = 30
 
 STYLE_GUIDE = (
     "Dark fantasy video-game boss portrait, dramatic rim lighting, painterly "
@@ -87,13 +85,17 @@ class Command(BaseCommand):
             errors = []
 
             for model_name in models_to_try:
+                self.stdout.write(f"  Trying {model_name}...")
                 try:
                     image_bytes = self._generate_one(client, model_name, prompt)
                     if image_bytes:
                         working_model = model_name
                         break
+                    else:
+                        errors.append(f"{model_name}: no image data in response")
                 except Exception as e:
                     errors.append(f"{model_name}: {e}")
+                    self.stderr.write(f"    -> failed: {e}")
 
             if not image_bytes:
                 self.stderr.write(self.style.ERROR(f"  Failed for {boss.name} — every model tried failed:"))
@@ -110,7 +112,11 @@ class Command(BaseCommand):
     def _generate_one(self, client, model_name, prompt):
         """Returns raw PNG bytes for the first image found in the response,
         or None if this model returned no image (caller tries the next)."""
-        response = client.models.generate_content(model=model_name, contents=prompt)
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config={"http_options": {"timeout": REQUEST_TIMEOUT_SECONDS * 1000}},
+        )
         candidates = getattr(response, "candidates", None) or []
         for candidate in candidates:
             content = getattr(candidate, "content", None)

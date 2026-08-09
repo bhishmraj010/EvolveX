@@ -48,7 +48,6 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "cloudinary_storage",
     "django.contrib.staticfiles",
     "cloudinary",
 
@@ -238,9 +237,10 @@ STATICFILES_DIRS = [
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-STATICFILES_STORAGE = (
-    "whitenoise.storage.CompressedManifestStaticFilesStorage"
-)
+# NOTE: static storage backend is now declared in the STORAGES dict
+# further down (next to CLOUDINARY_STORAGE) instead of here, to avoid
+# conflicting with cloudinary_storage's collectstatic override — see
+# the comment there for details.
 
 # ── Dev convenience: serve static files straight from STATICFILES_DIRS
 # instead of requiring `collectstatic` + the compressed manifest on every
@@ -268,7 +268,23 @@ CLOUDINARY_STORAGE = {
     "API_KEY": os.getenv("CLOUDINARY_API_KEY"),
     "API_SECRET": os.getenv("CLOUDINARY_API_SECRET"),
 }
-DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+
+# Use Django's unified STORAGES setting instead of the old separate
+# DEFAULT_FILE_STORAGE / STATICFILES_STORAGE settings. This is required
+# here because cloudinary_storage's collectstatic override checks
+# STATICFILES_STORAGE and silently skips copying any static files unless
+# it matches Cloudinary's own static storage class — which broke WhiteNoise
+# entirely (0 files copied, CSS/JS 404s in production). Declaring both
+# backends explicitly in STORAGES keeps WhiteNoise serving static files
+# while Cloudinary handles only MEDIA (uploaded/generated images).
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # ==========================
 # Email

@@ -48,7 +48,9 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "cloudinary_storage",
     "django.contrib.staticfiles",
+    "cloudinary",
 
     "users",
     "tasks",
@@ -255,6 +257,18 @@ WHITENOISE_AUTOREFRESH = DEBUG
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Cloudinary — used as the actual storage backend for MEDIA files (boss
+# portraits, avatars, etc). Render's filesystem is ephemeral (wiped on
+# every deploy/restart), so local disk storage doesn't survive there.
+# Cloudinary keeps uploaded/generated images permanently, and works
+# identically on localhost and on Render — no DEBUG-based branching needed.
+CLOUDINARY_STORAGE = {
+    "CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME"),
+    "API_KEY": os.getenv("CLOUDINARY_API_KEY"),
+    "API_SECRET": os.getenv("CLOUDINARY_API_SECRET"),
+}
+DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
 # ==========================
 # Email

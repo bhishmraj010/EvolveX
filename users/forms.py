@@ -27,13 +27,16 @@ class RegisterForm(UserCreationForm):
     email = forms.EmailField(required=True, widget=forms.EmailInput(
         attrs={'placeholder': 'your@email.com', 'class': 'form-input'}
     ))
+    phone_number = forms.CharField(max_length=15, required=False, widget=forms.TextInput(
+        attrs={'placeholder': '+91XXXXXXXXXX', 'class': 'form-input', 'autocomplete': 'off'}
+    ))
     name = forms.CharField(max_length=100, required=False, widget=forms.TextInput(
         attrs={'placeholder': 'Display name (optional)', 'class': 'form-input'}
     ))
 
     class Meta:
         model = CustomUser
-        fields = ('username', 'email', 'name', 'password1', 'password2')
+        fields = ('username', 'email', 'phone_number', 'name', 'password1', 'password2')
         widgets = {
             'username': forms.TextInput(attrs={
                 'placeholder': 'Choose a username', 'class': 'form-input'
@@ -53,6 +56,7 @@ class RegisterForm(UserCreationForm):
         user = super().save(commit=False)
         user.email = self.cleaned_data['email']
         user.name  = self.cleaned_data.get('name', '')
+        user.phone_number = self.cleaned_data.get('phone_number', '')
         if commit:
             user.save()
         return user

@@ -2328,7 +2328,8 @@ body.screen-shake { animation: screen-shake 0.5s cubic-bezier(.36,.07,.19,.97) b
   }
   .nav-links--open {
     display: flex;
-    max-height: 400px;
+    max-height: 80vh;
+    overflow-y: auto;
     opacity: 1;
     margin-top: 0.6rem;
     padding-top: 0.6rem;

@@ -24,10 +24,19 @@ def reports_home(request):
 
     # ── Tasks points (DailyLog) ───────────────────────────────────────────
     from tasks.models import DailyLog, Task, PRIORITY_POINTS, SKIP_DEDUCTION
+    from tasks.views import get_or_create_daily_log
 
     daily_logs = DailyLog.objects.filter(
         user=user, date__gte=start_date, date__lte=today
     ).order_by('date')
+
+    # ── Today's Day Status card — uses the same get_or_create_daily_log()
+    # helper the Dashboard/To-Do pages use, so thresholds (win/survive
+    # points) are computed with the user's actual per-level criteria, not
+    # a hardcoded number. Safe even if today has no activity yet (creates
+    # the row on the fly, same as everywhere else in the app). ──
+    today_log = get_or_create_daily_log(user, today)
+    today_status = today_log.day_status
 
     # Pure task-only points per day — NOT DailyLog.total_points, since that
     # field already has willpower points synced into it (see tracker app's
@@ -168,6 +177,7 @@ def reports_home(request):
         'days':           days,
         'start_date':     start_date,
         'today':          today,
+        'today_status':   today_status,
         # Chart data (JSON)
         'date_labels':    json.dumps(date_labels),
         'task_pts':       json.dumps(task_pts),

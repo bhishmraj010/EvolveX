@@ -18,7 +18,8 @@
   <meta property="og:title" content="{% block og_title %}EvolveX — AI-Powered Life Operating System{% endblock %}">
   <meta property="og:description" content="{% block og_description %}EvolveX turns self-improvement into an RPG — daily quests, boss fights, XP, and an AI coach that actually reads your patterns.{% endblock %}">
   <meta property="og:url" content="https://life-simulation-9bqz.onrender.com{{ request.path }}">
- 
+
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{% block twitter_title %}EvolveX — AI-Powered Life Operating System{% endblock %}">
   <meta name="twitter:description" content="{% block twitter_description %}EvolveX turns self-improvement into an RPG — daily quests, boss fights, XP, and an AI coach that reads your patterns.{% endblock %}">
 
@@ -26,7 +27,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-  <link rel="stylesheet" href="{% static 'css/main.css' %}?v=12">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}?v=13">
   <style>
     /* ── Global achievement/level-up/subscription popup ── */
     .popup-overlay {
@@ -355,25 +356,25 @@
   <div class="footer-divider"><span class="footer-divider-spark"></span></div>
 
   <div class="footer-socials">
-    <a href="#" class="footer-social" aria-label="YouTube">
+    <a href="https://www.youtube.com/@user-fn3xc3ny1o" class="footer-social" aria-label="YouTube" target="_blank" rel="noopener noreferrer">
       <span class="footer-social-icon">
         <svg viewBox="0 0 24 24" class="lucide" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.6 15.6V8.4L15.8 12l-6.2 3.6z"/></svg>
       </span>
       <span>YouTube</span>
     </a>
-    <a href="#" class="footer-social" aria-label="Instagram">
+    <a href="https://www.instagram.com/evolvex.app/" class="footer-social" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
       <span class="footer-social-icon">
         <svg viewBox="0 0 24 24" class="lucide" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="2.5" width="19" height="19" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.3" cy="6.7" r="1.1" fill="currentColor" stroke="none"/></svg>
       </span>
       <span>Instagram</span>
     </a>
-    <a href="#" class="footer-social" aria-label="X">
+    <a href="https://x.com/evolvexapp" class="footer-social" aria-label="X" target="_blank" rel="noopener noreferrer">
       <span class="footer-social-icon">
         <svg viewBox="0 0 24 24" class="lucide" fill="currentColor"><path d="M18.9 2H22l-7.6 8.7L23.3 22H16.7l-5.2-6.8L5.5 22H2.4l8.1-9.3L1.5 2h6.8l4.7 6.2L18.9 2zm-1.2 18h1.7L7.4 4h-1.8l12.1 16z"/></svg>
       </span>
       <span>X</span>
     </a>
-    <a href="#" class="footer-social" aria-label="Reddit">
+    <a href="https://www.reddit.com/r/offifcialevolvex/" class="footer-social" aria-label="Reddit" target="_blank" rel="noopener noreferrer">
       <span class="footer-social-icon">
         <svg viewBox="0 0 24 24" class="lucide" fill="currentColor"><path d="M22 12c0-1.1-.9-2-2-2-.5 0-1 .2-1.3.5-1.3-.9-3-1.4-4.9-1.5l.8-3.8 2.6.6c0 .8.7 1.4 1.5 1.4.8 0 1.5-.7 1.5-1.5S19.5 4 18.7 4c-.6 0-1.1.3-1.3.8l-2.9-.6c-.2 0-.3.1-.4.2l-.9 4.3c-1.9.1-3.6.6-4.9 1.5C8 9.9 7.5 9.7 7 9.7c-1.1 0-2 .9-2 2 0 .8.5 1.5 1.1 1.8-.1.3-.1.6-.1.9 0 2.5 2.9 4.5 6.5 4.5s6.5-2 6.5-4.5c0-.3 0-.6-.1-.9.6-.3 1.1-1 1.1-1.8zM9 13.5c0-.6.5-1 1-1s1 .4 1 1-.5 1-1 1-1-.4-1-1zm6.5 2.6c-.7.7-1.9 1-2.5 1s-1.8-.3-2.5-1c-.1-.1-.1-.3 0-.4.1-.1.3-.1.4 0 .5.5 1.5.8 2.1.8s1.6-.3 2.1-.8c.1-.1.3-.1.4 0 .1.1.1.3 0 .4zm-.3-1.6c-.5 0-1-.4-1-1s.5-1 1-1 1 .4 1 1-.5 1-1 1z"/></svg>
       </span>
@@ -391,7 +392,8 @@
 {% block extra_scripts %}{% endblock %}
 
 <!-- ── Insert this <script> block into base.html, right before </body> ── -->
-<script>
+
+  <script>
   // ── Auto-detect the browser's IANA timezone and sync it to the backend ────
   // Runs once per session per changed timezone. UserTimezoneMiddleware then
   // uses the saved value (or the `tz` cookie, for anonymous users) on every
@@ -410,6 +412,19 @@
       const storedTz = decodeURIComponent(getCookie('tz') || '');
       if (storedTz === detected) return; // already in sync, skip the request
 
+      // ── Reload guard ──────────────────────────────────────────────────
+      // FIX: previously this only checked `!storedTz` before reloading.
+      // If the browser can't persist the `tz` cookie at all (blocked
+      // cookies, strict privacy mode, some in-app webviews), storedTz
+      // stays empty forever — so every page load re-triggers the fetch,
+      // gets a 200 OK, sees `!storedTz` is still true, and reloads again.
+      // That's an infinite reload loop.
+      //
+      // sessionStorage doesn't depend on whether the `tz` cookie itself
+      // can be set, so it reliably remembers "we already reloaded once
+      // this tab session" and stops the loop regardless of cookie support.
+      const alreadyReloaded = sessionStorage.getItem('tzSyncReloaded') === '1';
+
       fetch("{% url 'set_timezone' %}", {
         method: 'POST',
         headers: {
@@ -417,17 +432,36 @@
           'X-CSRFToken': getCookie('csrftoken'),
         },
         body: 'tz=' + encodeURIComponent(detected),
-      }).then(() => {
-        // Reload once so this page render also reflects the correct
-        // timezone (the very first load before the cookie existed will
-        // have used the server default).
-        if (!storedTz) window.location.reload();
-      }).catch(() => {});
+      })
+        .then((res) => {
+          // IMPORTANT: fetch only rejects on network failure, NOT on HTTP
+          // error codes like 403/500. Without this check, a failing
+          // set_timezone call (e.g. 403 Forbidden) still falls into the
+          // old .then() and triggers a reload — and since the cookie was
+          // never saved, the next load repeats the same failing request.
+          if (!res.ok) {
+            throw new Error('set_timezone failed with status ' + res.status);
+          }
+          // Reload once so this page render also reflects the correct
+          // timezone (the very first load before the cookie existed will
+          // have used the server default). Guarded so it can only ever
+          // fire once per tab session, even if the cookie never sticks.
+          if (!storedTz && !alreadyReloaded) {
+            sessionStorage.setItem('tzSyncReloaded', '1');
+            window.location.reload();
+          }
+        })
+        .catch((err) => {
+          // Swallow errors silently in production; just don't reload.
+          console.warn('Timezone sync skipped:', err);
+        });
     } catch (e) {
       // Intl API unavailable — silently keep server default timezone.
     }
   })();
 </script>
+
+
 
 
 <script>
@@ -646,7 +680,7 @@
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closePopup(); });
   })();
 
-  
+
 </script>
 
 <script>

@@ -23,6 +23,9 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
     "evolvex-i5ud.onrender.com",
+    "54.89.190.207",
+    "www" ".evolvexapp.com",
+    "evolvexapp.com",
 ]
 
 # Render sets this automatically at deploy time — covers the case where
@@ -32,8 +35,12 @@ RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 CSRF_TRUSTED_ORIGINS = [
     "https://evolvex-i5ud.onrender.com",
+    "https://evolvexapp.com",
+    "https://www.evolvexapp.com",
 ]
 if RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
@@ -298,14 +305,25 @@ STORAGES = {
 # ==========================
 # Email
 # ==========================
-
+# Switched from smtp.gmail.com to Brevo's relay. Gmail's SMTP server
+# resolves to an IPv6 address, and Render's outbound network doesn't
+# route IPv6 properly — that's what caused "[Errno 101] Network is
+# unreachable" here, not a credentials problem. Brevo's relay works
+# reliably from Render.
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp-relay.brevo.com")
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")          # Brevo SMTP login (your Brevo account email)
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")  # Brevo SMTP key, NOT your account password
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)  # must be a Brevo-verified sender
+# Without this, a blocked/slow outbound SMTP connection on Render hangs
+# forever — gunicorn's own timeout then SIGKILLs the worker mid-request,
+# which is what was causing "Internal Server Error" on complete-profile.
+# 10s is generous for a normal SMTP handshake; it lets the existing
+# try/except around send_mail() in users/views.py actually catch the
+# failure and show a friendly error instead of killing the whole worker.
+EMAIL_TIMEOUT = 10
 
 # ==========================
 # Default PK

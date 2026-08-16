@@ -5,23 +5,39 @@
 {% block content %}
 
 <!-- Date Navigation -->
-<div class="date-nav">
-  <a href="?date={{ prev_date }}" class="date-arrow">‹</a>
+<div class="date-nav" data-mascot-target="diet-date-nav">
+  <a href="?date={{ prev_date }}" class="date-arrow" title="Previous Day">‹</a>
   <div class="date-center">
-    <span class="date-label">{% if is_today %}Today{% else %}Selected Day{% endif %}</span>
+    <span class="date-label">
+      {% if is_today %}Today
+      {% elif selected_date > today %}Selected Day (Future)
+      {% else %}Selected Day{% endif %}
+    </span>
     <span class="date-value">{{ selected_date|date:"D, d M Y" }}</span>
-    <input type="date" class="date-picker-input"
+    <input type="date" class="date-picker-input" data-mascot-target="diet-date-picker"
            value="{{ selected_date|date:'Y-m-d' }}"
            onchange="window.location='?date='+this.value">
   </div>
-  <a href="?date={{ next_date }}" class="date-arrow">›</a>
+  <a href="?date={{ next_date }}" class="date-arrow" title="Next Day">›</a>
 </div>
+
+{% if selected_date > today %}
+<div style="margin-bottom:1.2rem;background:var(--accent-glow);border:1px solid var(--accent)44;border-radius:8px;padding:0.65rem 1rem;font-size:0.85rem;color:var(--accent);display:flex;align-items:center;gap:0.5rem;">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>
+  <strong>Planning Mode</strong> — you can pre-log meals for this day. Photo analysis and cheat-meal toggling are only available on the actual day.
+</div>
+{% elif selected_date < today %}
+<div style="margin-bottom:1.2rem;background:rgba(245,158,11,.08);border:1px solid var(--gold)44;border-radius:8px;padding:0.65rem 1rem;font-size:0.85rem;color:var(--gold);display:flex;align-items:center;gap:0.5rem;">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+  <strong>Read Only</strong> — this is a past day, no changes allowed.
+</div>
+{% endif %}
 
 <!-- Macro Summary Cards -->
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1rem;margin-bottom:1.5rem;">
 
   <!-- Calories -->
-  <div class="card" style="border-color:
+  <div class="card" data-mascot-target="diet-cal-card" style="border-color:
     {% if diet_log.day_status == 'win' %}var(--green)
     {% elif diet_log.day_status == 'survive' %}var(--gold)
     {% elif diet_log.day_status == 'lose' %}var(--red)
@@ -50,7 +66,7 @@
   </div>
 
   <!-- Protein -->
-  <div class="card">
+  <div class="card" data-mascot-target="diet-protein-card">
     <div style="font-size:1.5rem;font-weight:700;color:#4cff91;">{{ diet_log.total_protein|floatformat:0 }}g</div>
     <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.5rem;">Protein / {{ profile.protein_g }}g</div>
     <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden;">
@@ -60,7 +76,7 @@
   </div>
 
   <!-- Carbs -->
-  <div class="card">
+  <div class="card" data-mascot-target="diet-carbs-card">
     <div style="font-size:1.5rem;font-weight:700;color:#f5c842;">{{ diet_log.total_carbs|floatformat:0 }}g</div>
     <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.5rem;">Carbs / {{ profile.carbs_g }}g</div>
     <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden;">
@@ -70,7 +86,7 @@
   </div>
 
   <!-- Fat -->
-  <div class="card">
+  <div class="card" data-mascot-target="diet-fat-card">
     <div style="font-size:1.5rem;font-weight:700;color:#ff4c6b;">{{ diet_log.total_fat|floatformat:0 }}g</div>
     <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.5rem;">Fat / {{ profile.fat_g }}g</div>
     <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden;">
@@ -106,7 +122,8 @@
     <span style="font-size:0.76rem;color:var(--text-secondary);">AI reads the photo & fills macros for you</span>
   </div>
 
-  <div id="photoUploadZone" style="border:2px dashed var(--border);border-radius:10px;padding:1.25rem;
+  {% if is_today %}
+  <div id="photoUploadZone" data-mascot-target="diet-photo-upload-zone" style="border:2px dashed var(--border);border-radius:10px;padding:1.25rem;
        text-align:center;cursor:pointer;transition:border-color .2s;" onclick="document.getElementById('mealPhotoInput').click()">
     <input type="file" id="mealPhotoInput" accept="image/*" capture="environment" style="display:none;">
     <div id="photoUploadPrompt">
@@ -122,7 +139,7 @@
   </div>
 
   <div id="photoActionsRow" style="display:none;margin-top:0.85rem;gap:0.75rem;align-items:center;flex-wrap:wrap;">
-    <button type="button" class="btn btn-primary" id="analyzePhotoBtn" onclick="analyzeMealPhoto()">
+    <button type="button" class="btn btn-primary" id="analyzePhotoBtn" data-mascot-target="diet-analyze-photo-btn" onclick="analyzeMealPhoto()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><path d="M8 16h.01"/><path d="M16 16h.01"/></svg>
       Analyze with AI
     </button>
@@ -159,7 +176,7 @@
          border-radius:8px;font-size:0.85rem;color:var(--text-secondary);display:flex;gap:1.5rem;flex-wrap:wrap;"></div>
 
     <div style="display:flex;justify-content:flex-end;margin-top:1rem;">
-      <button type="button" class="btn btn-primary" style="padding:0.6rem 1.5rem;" onclick="submitPhotoMeal()">
+      <button type="button" class="btn btn-primary" style="padding:0.6rem 1.5rem;" onclick="submitPhotoMeal()" data-mascot-target="diet-log-photo-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M20 6L9 17l-5-5"/></svg>
         Log This Meal
       </button>
@@ -174,6 +191,12 @@
     <input type="hidden" name="image_name" id="confirmImageName">
     <input type="hidden" name="items_json" id="confirmItemsJson">
   </form>
+  {% else %}
+  <div style="text-align:center;padding:1.5rem 1rem;color:var(--text-secondary);font-size:0.85rem;border:2px dashed var(--border);border-radius:10px;">
+    Photo logging is only available on the current day.
+    {% if selected_date > today %}Come back on this day to snap a meal.{% else %}This day is read-only.{% endif %}
+  </div>
+  {% endif %}
 </div>
 
 <!-- Add Food Form -->
@@ -183,12 +206,13 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
       Log Food
     </div>
-    <a href="{% url 'diet_edit_profile' %}" style="font-size:0.8rem;color:var(--text-secondary);text-decoration:none;display:flex;align-items:center;gap:0.3rem;">
+    <a href="{% url 'diet_edit_profile' %}" data-mascot-target="diet-edit-goals-link" style="font-size:0.8rem;color:var(--text-secondary);text-decoration:none;display:flex;align-items:center;gap:0.3rem;">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Edit Goals
     </a>
   </div>
 
+  {% if selected_date >= today %}
   <form method="POST" action="{% url 'diet_add_meal' %}" id="addMealForm">
     {% csrf_token %}
     <input type="hidden" name="date"       value="{{ selected_date|date:'Y-m-d' }}">
@@ -207,7 +231,7 @@
       <!-- Food search -->
       <div>
         <label style="font-size:0.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:0.35rem;">Food Name</label>
-        <div style="position:relative;">
+        <div style="position:relative;" data-mascot-target="diet-food-search">
           <input type="text" id="foodSearch" name="food_name"
                  placeholder="Search or type food name..."
                  class="form-input" autocomplete="off">
@@ -261,16 +285,21 @@
     </div>
 
     <div style="display:flex;align-items:center;gap:1.25rem;margin-top:0.85rem;flex-wrap:wrap;">
-      <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.88rem;color:var(--red);cursor:pointer;">
+      <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.88rem;color:var(--red);cursor:pointer;" data-mascot-target="diet-cheat-checkbox">
         <input type="checkbox" name="is_cheat" style="accent-color:var(--red);width:15px;height:15px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 21h20L12 2z"/><circle cx="12" cy="14" r="1"/><circle cx="9" cy="17" r="1"/><circle cx="15" cy="17" r="1"/></svg>
         Mark as Cheat Meal <span style="color:var(--text-secondary);font-size:0.78rem;">(-5 pts)</span>
       </label>
-      <button type="submit" class="btn btn-primary" style="margin-left:auto;padding:0.6rem 1.5rem;">
+      <button type="submit" class="btn btn-primary" data-mascot-target="diet-log-food-btn" style="margin-left:auto;padding:0.6rem 1.5rem;">
         Log Food
       </button>
     </div>
   </form>
+  {% else %}
+  <div style="text-align:center;padding:1.25rem 1rem;color:var(--text-secondary);font-size:0.85rem;">
+    This day is read-only — you can't log food for a past date.
+  </div>
+  {% endif %}
 </div>
 
 <!-- Meal Groups -->
@@ -312,7 +341,7 @@
       </thead>
       <tbody>
         {% for meal in group.items %}
-        <tr class="task-row {% if meal.is_cheat %}task-skip-row{% endif %}">
+        <tr class="task-row {% if meal.is_cheat %}task-skip-row{% endif %}" data-mascot-target="diet-meal-row">
           <td>
             <span style="font-weight:500;">{{ meal.display_name }}</span>
             {% if meal.is_cheat %}
@@ -333,9 +362,10 @@
           <td style="color:#f5c842;">{{ meal.carbs_g|floatformat:1 }}g</td>
           <td style="color:#ff4c6b;">{{ meal.fat_g|floatformat:1 }}g</td>
           <td>
+            {% if is_today %}
             <div class="action-btns">
               <a href="{% url 'diet_toggle_cheat' meal.id %}"
-                 class="btn btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.78rem;"
+                 class="btn btn-secondary" data-mascot-target="diet-meal-cheat-btn" style="padding:0.3rem 0.6rem;font-size:0.78rem;"
                  title="{% if meal.is_cheat %}Remove cheat{% else %}Mark cheat{% endif %}">
                 {% if meal.is_cheat %}
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
@@ -344,11 +374,22 @@
                 {% endif %}
               </a>
               <a href="{% url 'diet_delete_meal' meal.id %}"
-                 class="btn btn-danger" style="padding:0.3rem 0.6rem;font-size:0.78rem;"
+                 class="btn btn-danger" data-mascot-target="diet-meal-delete-btn" style="padding:0.3rem 0.6rem;font-size:0.78rem;"
                  onclick="return confirm('Delete {{ meal.display_name }}?')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
               </a>
             </div>
+            {% elif selected_date > today %}
+            <div class="action-btns">
+              <a href="{% url 'diet_delete_meal' meal.id %}"
+                 class="btn btn-danger" data-mascot-target="diet-meal-delete-btn" style="padding:0.3rem 0.6rem;font-size:0.78rem;"
+                 onclick="return confirm('Delete {{ meal.display_name }}?')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              </a>
+            </div>
+            {% else %}
+            <span style="font-size:0.78rem;color:var(--text-secondary);">Read only</span>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -366,7 +407,7 @@
     <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M17 2v9a2 2 0 0 1-2 2 2 2 0 0 1-2-2c0-4 1-9 4-9z"/><path d="M17 13v9"/></svg>
   </div>
   <div style="font-size:1rem;margin-bottom:0.5rem;">No meals logged for this day.</div>
-  <div style="font-size:0.85rem;">Search and add your first meal above!</div>
+  <div style="font-size:0.85rem;">{% if selected_date >= today %}Search and add your first meal above!{% else %}Nothing was logged on this day.{% endif %}</div>
 </div>
 {% endif %}
 
@@ -374,6 +415,9 @@
 
 {% block extra_scripts %}
 <script>
+const IS_TODAY  = {% if is_today %}true{% else %}false{% endif %};
+const IS_FUTURE = {% if selected_date > today %}true{% else %}false{% endif %};
+
 // ── Reusable inline icon strings (replace emoji everywhere below) ─────────
 const ICON_FLAME = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>';
 const ICON_BOT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><path d="M8 16h.01"/><path d="M16 16h.01"/></svg>';
@@ -383,6 +427,9 @@ const ICON_TRASH = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" 
 let selectedFood = null;  // food from DB
 let aiData       = null;  // food from AI
 
+// ══════════════════════════════════════════════════════════════════════════
+// Add-Food form — only present in the DOM when selected_date >= today
+// ══════════════════════════════════════════════════════════════════════════
 const searchInput = document.getElementById('foodSearch');
 const dropdown    = document.getElementById('searchDropdown');
 const aiPreview   = document.getElementById('aiPreview');
@@ -392,13 +439,20 @@ const qtyEl       = document.getElementById('qty');
 
 let searchTimer = null;
 
-// ── Search input ──────────────────────────────────────────────────────────
-searchInput.addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  const q = searchInput.value.trim();
-  if (q.length < 2) { dropdown.style.display = 'none'; return; }
-  searchTimer = setTimeout(() => doSearch(q), 350);
-});
+if (searchInput) {
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const q = searchInput.value.trim();
+    if (q.length < 2) { dropdown.style.display = 'none'; return; }
+    searchTimer = setTimeout(() => doSearch(q), 350);
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#foodSearch') && !e.target.closest('#searchDropdown')) {
+      dropdown.style.display = 'none';
+    }
+  });
+}
 
 async function doSearch(q) {
   const res  = await fetch(`/diet/api/search/?q=${encodeURIComponent(q)}`);
@@ -506,15 +560,8 @@ function updatePreview() {
     `<span>Fat: <strong style="color:#ff4c6b;">${fat}g</strong></span>`;
 }
 
-// ── Close dropdown on outside click ──────────────────────────────────────
-document.addEventListener('click', e => {
-  if (!e.target.closest('#foodSearch') && !e.target.closest('#searchDropdown')) {
-    dropdown.style.display = 'none';
-  }
-});
-
 // ══════════════════════════════════════════════════════════════════════════
-// Photo-based AI meal logger
+// Photo-based AI meal logger — only present in the DOM when IS_TODAY
 // ══════════════════════════════════════════════════════════════════════════
 const photoInput      = document.getElementById('mealPhotoInput');
 const photoUploadZone = document.getElementById('photoUploadZone');
@@ -532,25 +579,28 @@ const photoDescEl     = document.getElementById('photoDescription');
 let currentPhotoItems = [];   // working copy of AI-detected items (editable)
 let currentImageName  = '';   // storage path of the saved photo
 
-photoInput.addEventListener('change', () => {
-  const file = photoInput.files[0];
-  if (!file) return;
+if (photoInput) {
+  photoInput.addEventListener('change', () => {
+    const file = photoInput.files[0];
+    if (!file) return;
 
-  photoError.style.display = 'none';
-  photoReviewPanel.style.display = 'none';
+    photoError.style.display = 'none';
+    photoReviewPanel.style.display = 'none';
 
-  const reader = new FileReader();
-  reader.onload = e => {
-    photoPreviewImg.src = e.target.result;
-    photoPrompt.style.display  = 'none';
-    photoPreviewWrap.style.display = 'block';
-    photoActionsRow.style.display  = 'flex';
-    photoUploadZone.style.borderColor = 'var(--accent)';
-  };
-  reader.readAsDataURL(file);
-});
+    const reader = new FileReader();
+    reader.onload = e => {
+      photoPreviewImg.src = e.target.result;
+      photoPrompt.style.display  = 'none';
+      photoPreviewWrap.style.display = 'block';
+      photoActionsRow.style.display  = 'flex';
+      photoUploadZone.style.borderColor = 'var(--accent)';
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 function resetPhotoUpload() {
+  if (!photoInput) return;
   photoInput.value = '';
   currentPhotoItems = [];
   currentImageName  = '';
@@ -564,6 +614,7 @@ function resetPhotoUpload() {
 }
 
 async function analyzeMealPhoto() {
+  if (!photoInput) return;
   const file = photoInput.files[0];
   if (!file) return;
 

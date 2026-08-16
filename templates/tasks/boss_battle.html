@@ -214,7 +214,7 @@
     <h1 class="td-title" style="margin-bottom:0.2rem;"><i data-lucide="swords" class="lucide"></i> Boss Fights</h1>
     <p class="td-sub" style="margin:0;">Face your inner demons. Defeat them. Evolve.</p>
   </div>
-  <div class="nb-stats-row">
+  <div class="nb-stats-row" data-mascot-target="boss-stats-row">
     <div class="nb-stat streak">
       <div class="lbl"><i data-lucide="flame" class="lucide"></i> Win Streak</div>
       <div class="val">{{ current_streak|default:0 }} <small>days</small></div>
@@ -346,7 +346,7 @@
             {% else %}
               <form method="post" action="{% url 'complete_challenge' cd.challenge.id %}" class="challenge-complete-form">
                 {% csrf_token %}
-                <button type="submit" class="nb-task-complete-btn btn-complete">
+                <button type="submit" class="nb-task-complete-btn btn-complete" data-mascot-target="boss-challenge-btn">
                   <i data-lucide="swords" class="lucide"></i> Mark Complete
                 </button>
               </form>
@@ -465,7 +465,7 @@
   <div class="nb-panel">
     <div class="nb-panel-head"><i data-lucide="swords" class="lucide"></i> Recent Battles</div>
     <div class="nb-panel-sub">Your recent victories</div>
-    <div class="nb-recent-list">
+    <div class="nb-recent-list" data-mascot-target="boss-recent-battles">
       {% for d in defeated_bosses|slice:":5" %}
       <div class="nb-recent-row">
         <div class="nb-recent-avatar"><i data-lucide="skull" class="lucide"></i></div>
@@ -489,7 +489,7 @@
 <details class="nb-more">
   <summary><i data-lucide="chevron-right" class="lucide"></i> Full journey map &amp; upcoming bosses</summary>
 
-  <div class="bf-journey-card">
+  <div class="bf-journey-card" data-mascot-target="boss-journey-map">
     <div class="bf-journey-head">
       <div class="bf-section-title" style="margin-bottom:0;"><i data-lucide="map" class="lucide"></i> Boss Journey <span style="color:var(--text-muted);font-weight:400;font-size:0.8rem;">(Level 1 - 10)</span></div>
       <div class="bf-journey-xpbar">

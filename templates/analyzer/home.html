@@ -58,14 +58,14 @@
       </p>
     </div>
     <div class="flex items-center gap-3">
-      <a href="?type={{ report_type }}&refresh=1" class="px-4 py-2 glass rounded-lg text-sm text-gray-300 hover:text-white transition flex items-center gap-2">
+      <a href="?type={{ report_type }}&refresh=1" class="px-4 py-2 glass rounded-lg text-sm text-gray-300 hover:text-white transition flex items-center gap-2" data-mascot-target="analyzer-reanalyze-btn">
         <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Re-analyze
       </a>
     </div>
   </div>
 
   <!-- Report Type Tabs -->
-  <div class="flex flex-wrap gap-2">
+  <div class="flex flex-wrap gap-2" data-mascot-target="analyzer-type-tabs">
     {% for t, label in report_types %}
       <a href="?type={{ t }}"
          class="px-4 py-2 rounded-lg text-sm transition
@@ -87,7 +87,7 @@
   {% else %}
 
   <!-- ========== 0. Section Reports (Todo / Willpower / Diet / Roadmap / Boss Fight) ========== -->
-  <section class="reveal">
+  <section class="reveal" data-mascot-target="analyzer-section-reports">
     <div class="flex items-center gap-2 mb-4">
       <i data-lucide="layout-grid" class="w-6 h-6 text-indigo-400"></i>
       <h2 class="text-2xl font-bold text-white">Section Reports</h2>
@@ -172,7 +172,7 @@
   </div>
 
   <!-- ========== 1. AI Verdict ========== -->
-  <section class="glass rounded-2xl p-6 reveal">
+  <section class="glass rounded-2xl p-6 reveal" data-mascot-target="analyzer-verdict">
     <div class="flex items-start gap-4">
       <div class="p-3 rounded-full bg-indigo-500/20">
         <i data-lucide="gavel" class="w-6 h-6 text-indigo-400"></i>
@@ -194,7 +194,7 @@
   </section>
 
   <!-- ========== 2. Evolution Score + Grade ========== -->
-  <section class="glass rounded-2xl p-6 reveal text-center">
+  <section class="glass rounded-2xl p-6 reveal text-center" data-mascot-target="analyzer-evolution-score">
     <div class="flex flex-col items-center">
       <div class="text-6xl font-bold text-white score-glow">{{ report.evolution_score|default:0 }}</div>
       <div class="text-sm text-gray-400 uppercase tracking-wider mt-1">Evolution Score</div>
@@ -207,22 +207,22 @@
 
   <!-- ========== 3. AI Score Cards ========== -->
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 reveal">
-    <div class="glass rounded-xl p-5 text-center hover:glass-hover transition">
+    <div class="glass rounded-xl p-5 text-center hover:glass-hover transition" data-mascot-target="analyzer-score-discipline">
       <i data-lucide="target" class="w-6 h-6 text-indigo-400 mx-auto mb-2"></i>
       <div class="text-3xl font-bold text-white">{{ report.discipline_score|default:0 }}</div>
       <div class="text-xs text-gray-400 uppercase tracking-wider">Discipline</div>
     </div>
-    <div class="glass rounded-xl p-5 text-center hover:glass-hover transition">
+    <div class="glass rounded-xl p-5 text-center hover:glass-hover transition" data-mascot-target="analyzer-score-productivity">
       <i data-lucide="zap" class="w-6 h-6 text-yellow-400 mx-auto mb-2"></i>
       <div class="text-3xl font-bold text-white">{{ report.productivity_score|default:0 }}</div>
       <div class="text-xs text-gray-400 uppercase tracking-wider">Productivity</div>
     </div>
-    <div class="glass rounded-xl p-5 text-center hover:glass-hover transition">
+    <div class="glass rounded-xl p-5 text-center hover:glass-hover transition" data-mascot-target="analyzer-score-focus">
       <i data-lucide="eye" class="w-6 h-6 text-cyan-400 mx-auto mb-2"></i>
       <div class="text-3xl font-bold text-white">{{ report.focus_score|default:0 }}</div>
       <div class="text-xs text-gray-400 uppercase tracking-wider">Focus</div>
     </div>
-    <div class="glass rounded-xl p-5 text-center hover:glass-hover transition border border-indigo-500/30">
+    <div class="glass rounded-xl p-5 text-center hover:glass-hover transition border border-indigo-500/30" data-mascot-target="analyzer-score-evolution">
       <i data-lucide="trending-up" class="w-6 h-6 text-green-400 mx-auto mb-2"></i>
       <div class="text-3xl font-bold text-white">{{ report.evolution_score|default:0 }}</div>
       <div class="text-xs text-gray-400 uppercase tracking-wider">Evolution</div>
@@ -230,7 +230,7 @@
   </section>
 
   <!-- ========== 4. Hidden Patterns ========== -->
-  <section class="glass rounded-2xl p-6 reveal">
+  <section class="glass rounded-2xl p-6 reveal" data-mascot-target="analyzer-hidden-patterns">
     <div class="flex items-center gap-2 mb-4">
       <i data-lucide="eye-off" class="w-5 h-5 text-purple-400"></i>
       <h2 class="text-lg font-semibold text-white">Hidden Patterns</h2>
@@ -250,7 +250,7 @@
   </section>
 
   <!-- ========== 5. Success Patterns ========== -->
-  <section class="glass rounded-2xl p-6 reveal">
+  <section class="glass rounded-2xl p-6 reveal" data-mascot-target="analyzer-success-patterns">
     <div class="flex items-center gap-2 mb-4">
       <i data-lucide="check-circle" class="w-5 h-5 text-green-400"></i>
       <h2 class="text-lg font-semibold text-white">Success Patterns</h2>
@@ -270,7 +270,7 @@
   </section>
 
   <!-- ========== 6. Failure Patterns ========== -->
-  <section class="glass rounded-2xl p-6 reveal">
+  <section class="glass rounded-2xl p-6 reveal" data-mascot-target="analyzer-failure-patterns">
     <div class="flex items-center gap-2 mb-4">
       <i data-lucide="x-circle" class="w-5 h-5 text-red-400"></i>
       <h2 class="text-lg font-semibold text-white">Failure Patterns</h2>
@@ -290,7 +290,7 @@
   </section>
 
   <!-- ========== 7. Opportunity Engine ========== -->
-  <section class="glass rounded-2xl p-6 reveal">
+  <section class="glass rounded-2xl p-6 reveal" data-mascot-target="analyzer-opportunity-engine">
     <div class="flex items-center gap-2 mb-4">
       <i data-lucide="rocket" class="w-5 h-5 text-orange-400"></i>
       <h2 class="text-lg font-semibold text-white">Opportunity Engine</h2>
@@ -322,35 +322,35 @@
 
   <!-- ========== 8. Risk Analysis Cards ========== -->
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 reveal">
-    <div class="glass rounded-xl p-4 text-center">
+    <div class="glass rounded-xl p-4 text-center" data-mascot-target="analyzer-risk-burnout">
       <div class="text-sm text-gray-400">Burnout</div>
       <div class="text-2xl font-bold text-white">{{ report.burnout_risk|default:0 }}%</div>
       <div class="w-full h-1.5 risk-bar-bg rounded-full mt-2 overflow-hidden">
         <div class="h-full bg-red-400 risk-bar-fill" style="width:{{ report.burnout_risk|default:0 }}%"></div>
       </div>
     </div>
-    <div class="glass rounded-xl p-4 text-center">
+    <div class="glass rounded-xl p-4 text-center" data-mascot-target="analyzer-risk-streak">
       <div class="text-sm text-gray-400">Streak Break</div>
       <div class="text-2xl font-bold text-white">{{ report.streak_break_risk|default:0 }}%</div>
       <div class="w-full h-1.5 risk-bar-bg rounded-full mt-2 overflow-hidden">
         <div class="h-full bg-yellow-400 risk-bar-fill" style="width:{{ report.streak_break_risk|default:0 }}%"></div>
       </div>
     </div>
-    <div class="glass rounded-xl p-4 text-center">
+    <div class="glass rounded-xl p-4 text-center" data-mascot-target="analyzer-risk-goal">
       <div class="text-sm text-gray-400">Goal Failure</div>
       <div class="text-2xl font-bold text-white">{{ report.goal_failure_risk|default:0 }}%</div>
       <div class="w-full h-1.5 risk-bar-bg rounded-full mt-2 overflow-hidden">
         <div class="h-full bg-orange-400 risk-bar-fill" style="width:{{ report.goal_failure_risk|default:0 }}%"></div>
       </div>
     </div>
-    <div class="glass rounded-xl p-4 text-center">
+    <div class="glass rounded-xl p-4 text-center" data-mascot-target="analyzer-risk-productivity">
       <div class="text-sm text-gray-400">Productivity Decline</div>
       <div class="text-2xl font-bold text-white">{{ report.productivity_decline_risk|default:0 }}%</div>
       <div class="w-full h-1.5 risk-bar-bg rounded-full mt-2 overflow-hidden">
         <div class="h-full bg-indigo-400 risk-bar-fill" style="width:{{ report.productivity_decline_risk|default:0 }}%"></div>
       </div>
     </div>
-    <div class="glass rounded-xl p-4 text-center">
+    <div class="glass rounded-xl p-4 text-center" data-mascot-target="analyzer-risk-consistency">
       <div class="text-sm text-gray-400">Consistency</div>
       <div class="text-2xl font-bold text-white">{{ report.consistency_risk|default:0 }}%</div>
       <div class="w-full h-1.5 risk-bar-bg rounded-full mt-2 overflow-hidden">
@@ -360,7 +360,7 @@
   </section>
 
   <!-- ========== 9. Goal Prediction Cards ========== -->
-  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 reveal">
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 reveal" data-mascot-target="analyzer-goal-prediction">
     <div class="glass rounded-xl p-5 text-center">
       <div class="text-sm text-gray-400">Goal Probability</div>
       <div class="text-3xl font-bold text-white">{{ report.goal_probability|default:0 }}%</div>
@@ -381,7 +381,7 @@
   </section>
 
   <!-- ========== 10. Trend Analysis ========== -->
-  <section class="glass rounded-2xl p-6 reveal">
+  <section class="glass rounded-2xl p-6 reveal" data-mascot-target="analyzer-trend-chart">
     <div class="flex items-center gap-2 mb-4">
       <i data-lucide="trending-up" class="w-5 h-5 text-blue-400"></i>
       <h2 class="text-lg font-semibold text-white">Trend Analysis</h2>
@@ -393,7 +393,7 @@
   </section>
 
   <!-- ========== 11. Key Insights ========== -->
-  <section class="glass rounded-2xl p-6 reveal">
+  <section class="glass rounded-2xl p-6 reveal" data-mascot-target="analyzer-key-insights">
     <div class="flex items-center gap-2 mb-4">
       <i data-lucide="lightbulb" class="w-5 h-5 text-yellow-400"></i>
       <h2 class="text-lg font-semibold text-white">Key Insights</h2>
@@ -413,7 +413,7 @@
   </section>
 
   <!-- ========== 12. Root Cause Analysis ========== -->
-  <section class="glass rounded-2xl p-6 reveal">
+  <section class="glass rounded-2xl p-6 reveal" data-mascot-target="analyzer-root-cause">
     <div class="flex items-center gap-2 mb-4">
       <i data-lucide="search" class="w-5 h-5 text-purple-400"></i>
       <h2 class="text-lg font-semibold text-white">Root Cause Analysis</h2>
@@ -433,7 +433,7 @@
   </section>
 
   <!-- ========== 13. Personalized Recommendations ========== -->
-  <section class="glass rounded-2xl p-6 reveal border border-cyan-500/20">
+  <section class="glass rounded-2xl p-6 reveal border border-cyan-500/20" data-mascot-target="analyzer-recommendations">
     <div class="flex items-center gap-2 mb-4">
       <i data-lucide="check-square" class="w-5 h-5 text-cyan-400"></i>
       <h2 class="text-lg font-semibold text-white">Personalized Recommendations</h2>
@@ -453,7 +453,7 @@
   </section>
 
   <!-- ========== 14. Future Prediction ========== -->
-  <section class="glass rounded-2xl p-6 reveal border border-{{ report.score_band }}-500/30">
+  <section class="glass rounded-2xl p-6 reveal border border-{{ report.score_band }}-500/30" data-mascot-target="analyzer-future-prediction">
     <div class="flex items-center gap-2 mb-4">
       <i data-lucide="telescope" class="w-5 h-5 text-pink-400"></i>
       <h2 class="text-lg font-semibold text-white">Future Prediction</h2>

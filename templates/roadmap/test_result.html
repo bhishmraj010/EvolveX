@@ -35,7 +35,7 @@
 {% block content %}
 <div class="rm-result-wrap">
 
-  <div class="rm-result-banner {% if test.passed %}pass{% else %}fail{% endif %}">
+  <div class="rm-result-banner {% if test.passed %}pass{% else %}fail{% endif %}" data-mascot-target="test-result-banner">
     {% if test.passed %}
       <div style="font-size:2rem;">🎉</div>
       <div class="rm-result-score">{{ test.score }} / {{ test.total_marks }}</div>
@@ -55,7 +55,7 @@
       <div class="rm-result-actions">
         <form method="post" action="{% url 'roadmap_start_remedial' phase.id %}">
           {% csrf_token %}
-          <button type="submit" class="btn btn-primary"><i data-lucide="book-open" class="lucide"></i> Study More &amp; Retake Test</button>
+          <button type="submit" class="btn btn-primary" data-mascot-target="test-retake-btn"><i data-lucide="book-open" class="lucide"></i> Study More &amp; Retake Test</button>
         </form>
         <a href="{% url 'roadmap_home' %}" class="btn" style="border:1px solid var(--border); color:var(--text-secondary);">Back to Roadmap</a>
       </div>

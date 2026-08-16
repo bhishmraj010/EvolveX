@@ -14,7 +14,7 @@
   </div>
 
   {% if plans.0.promo_active %}
-  <div style="display:flex;justify-content:center;margin-bottom:2rem;">
+  <div style="display:flex;justify-content:center;margin-bottom:2rem;" data-mascot-target="pricing-promo-banner">
     <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.4);border-radius:999px;padding:0.5rem 1.2rem;font-size:0.85rem;">
       <i data-lucide="sparkles" class="lucide" style="width:16px;height:16px;color:#a78bfa;"></i>
       Special Offer Ends On:
@@ -25,7 +25,7 @@
   {% endif %}
 
   {% if active_sub %}
-  <div class="card glass" style="text-align:center;margin-bottom:1.6rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+  <div class="card glass" style="text-align:center;margin-bottom:1.6rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;" data-mascot-target="pricing-active-sub">
     <i data-lucide="badge-check" class="lucide" style="width:18px;height:18px;color:var(--grad-cyan);"></i>
     <strong style="color:var(--grad-cyan);">
       You're subscribed: {{ active_sub.get_plan_code_display }}
@@ -38,7 +38,7 @@
     {% for plan in plans %}
     {% if plan.code == 'quarterly' %}
       {% with accent="#22c55e" accent_soft="rgba(34,197,94,0.1)" icon="clock" %}
-      <div class="card glass" style="padding:2rem 1.6rem;position:relative;overflow:visible;border:1px solid {{ accent }};box-shadow:0 0 0 1px {{ accent }}, 0 8px 32px {{ accent_soft }};">
+      <div class="card glass" style="padding:2rem 1.6rem;position:relative;overflow:visible;border:1px solid {{ accent }};box-shadow:0 0 0 1px {{ accent }}, 0 8px 32px {{ accent_soft }};" data-mascot-target="pricing-plan-quarterly">
         {% if plan.promo_active %}
         <div style="position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:{{ accent }};color:#fff;padding:0.3rem 1rem;border-radius:999px;font-size:0.72rem;font-weight:700;letter-spacing:0.03em;white-space:nowrap;">
           BEST VALUE
@@ -76,7 +76,7 @@
           <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Export &amp; Backup Data</li>
         </ul>
 
-        <button class="buy-btn" data-plan="{{ plan.code }}" style="width:100%;padding:0.9rem;border:none;border-radius:10px;background:{{ accent }};color:#fff;font-weight:700;font-size:0.95rem;cursor:pointer;">
+        <button class="buy-btn" data-plan="{{ plan.code }}" data-mascot-target="pricing-buy-quarterly" style="width:100%;padding:0.9rem;border:none;border-radius:10px;background:{{ accent }};color:#fff;font-weight:700;font-size:0.95rem;cursor:pointer;">
           Get 3 Months Plan
         </button>
         <p style="text-align:center;color:var(--text-muted);font-size:0.72rem;margin-top:0.7rem;display:flex;align-items:center;justify-content:center;gap:0.3rem;">
@@ -87,7 +87,7 @@
 
     {% elif plan.code == 'yearly' %}
       {% with accent="#f59e0b" accent_soft="rgba(245,158,11,0.1)" icon="crown" %}
-      <div class="card glass" style="padding:2rem 1.6rem;position:relative;overflow:visible;border:1px solid {{ accent }};box-shadow:0 0 0 1px {{ accent }}, 0 8px 32px {{ accent_soft }};">
+      <div class="card glass" style="padding:2rem 1.6rem;position:relative;overflow:visible;border:1px solid {{ accent }};box-shadow:0 0 0 1px {{ accent }}, 0 8px 32px {{ accent_soft }};" data-mascot-target="pricing-plan-yearly">
         {% if plan.promo_active %}
         <div style="position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:{{ accent }};color:#fff;padding:0.3rem 1rem;border-radius:999px;font-size:0.72rem;font-weight:700;letter-spacing:0.03em;white-space:nowrap;">
           LIMITED TIME OFFER
@@ -128,7 +128,7 @@
           <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Exclusive Premium Content</li>
         </ul>
 
-        <button class="buy-btn" data-plan="{{ plan.code }}" style="width:100%;padding:0.9rem;border:none;border-radius:10px;background:linear-gradient(135deg,{{ accent }},#fb923c);color:#fff;font-weight:700;font-size:0.95rem;cursor:pointer;">
+        <button class="buy-btn" data-plan="{{ plan.code }}" data-mascot-target="pricing-buy-yearly" style="width:100%;padding:0.9rem;border:none;border-radius:10px;background:linear-gradient(135deg,{{ accent }},#fb923c);color:#fff;font-weight:700;font-size:0.95rem;cursor:pointer;">
           Get Annual Plan
         </button>
         <p style="text-align:center;color:var(--text-muted);font-size:0.72rem;margin-top:0.7rem;display:flex;align-items:center;justify-content:center;gap:0.3rem;">
@@ -139,7 +139,7 @@
 
     {% else %}
       {% with accent="#8b5cf6" accent_soft="rgba(139,92,246,0.1)" icon="calendar-days" %}
-      <div class="card glass" style="padding:2rem 1.6rem;position:relative;border:1px solid var(--border);">
+      <div class="card glass" style="padding:2rem 1.6rem;position:relative;border:1px solid var(--border);" data-mascot-target="pricing-plan-monthly">
         <div style="width:52px;height:52px;border-radius:14px;background:{{ accent_soft }};display:flex;align-items:center;justify-content:center;margin-bottom:1rem;">
           <i data-lucide="{{ icon }}" class="lucide" style="width:26px;height:26px;color:{{ accent }};"></i>
         </div>
@@ -162,7 +162,7 @@
           <li style="display:flex;align-items:center;gap:0.6rem;font-size:0.88rem;"><i data-lucide="check-circle" class="lucide" style="width:16px;height:16px;color:{{ accent }};flex-shrink:0;"></i> Regular Updates</li>
         </ul>
 
-        <button class="buy-btn" data-plan="{{ plan.code }}" style="width:100%;padding:0.9rem;border:none;border-radius:10px;background:{{ accent }};color:#fff;font-weight:700;font-size:0.95rem;cursor:pointer;">
+        <button class="buy-btn" data-plan="{{ plan.code }}" data-mascot-target="pricing-buy-monthly" style="width:100%;padding:0.9rem;border:none;border-radius:10px;background:{{ accent }};color:#fff;font-weight:700;font-size:0.95rem;cursor:pointer;">
           Get Started Now
         </button>
         <p style="text-align:center;color:var(--text-muted);font-size:0.72rem;margin-top:0.7rem;display:flex;align-items:center;justify-content:center;gap:0.3rem;">
@@ -174,7 +174,7 @@
     {% endfor %}
   </div>
 
-  <div class="card glass" style="margin-top:2.4rem;padding:1.8rem;">
+  <div class="card glass" style="margin-top:2.4rem;padding:1.8rem;" data-mascot-target="pricing-benefits">
     <h3 style="text-align:center;margin-bottom:1.4rem;color:var(--text-secondary);font-size:1.05rem;">
       Why Upgrade to Premium?
     </h3>
@@ -226,8 +226,8 @@
   <div id="gatewayModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;align-items:center;justify-content:center;">
     <div class="card glass" style="max-width:340px;width:90%;text-align:center;padding:1.8rem;">
       <h3 style="margin-bottom:1.1rem;">Pay with</h3>
-      <button id="payRazorpay" class="btn btn-primary" style="width:100%;margin-bottom:0.8rem;">Razorpay (Cards / UPI)</button>
-      <button id="payPaypal" style="width:100%;padding:0.7rem;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text-primary);cursor:pointer;">PayPal</button>
+      <button id="payRazorpay" class="btn btn-primary" style="width:100%;margin-bottom:0.8rem;" data-mascot-target="pricing-pay-razorpay">Razorpay (Cards / UPI)</button>
+      <button id="payPaypal" style="width:100%;padding:0.7rem;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text-primary);cursor:pointer;" data-mascot-target="pricing-pay-paypal">PayPal</button>
       <div id="paypalContainer" style="margin-top:1rem;"></div>
       <button id="closeModal" style="margin-top:1rem;background:none;border:none;color:var(--text-muted);cursor:pointer;">Cancel</button>
     </div>

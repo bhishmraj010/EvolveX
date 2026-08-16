@@ -24,15 +24,28 @@ def get_selected_date(request):
     today = timezone.localdate()
     today_str = today.isoformat()
 
+    # 1. An explicit ?date= on THIS request always wins. This is what makes
+    #    Prev/Next/date-picker links actually work, regardless of whether
+    #    SelectedDateMiddleware already wrote it into the session — the view
+    #    no longer depends solely on the middleware having run correctly.
+    query_date = request.GET.get("date")
+    if query_date:
+        try:
+            chosen = date_cls.fromisoformat(query_date)
+            request.session[_SELECTED_KEY] = query_date
+            request.session[_LAST_SEEN_KEY] = today_str
+            return chosen
+        except ValueError:
+            pass  # garbage date param — fall through to normal logic
+
+    # 2. No date on THIS request — auto-reset once per real-world day.
     last_seen = request.session.get(_LAST_SEEN_KEY)
     if last_seen != today_str:
-        # First request we've seen since the real-world date changed —
-        # drop any manually chosen date from a previous day and reset the
-        # marker so subsequent requests today keep whatever the user picks.
         request.session[_LAST_SEEN_KEY] = today_str
         request.session.pop(_SELECTED_KEY, None)
         return today
 
+    # 3. Otherwise fall back to whatever was picked earlier this session.
     date_str = request.session.get(_SELECTED_KEY)
     if date_str:
         try:

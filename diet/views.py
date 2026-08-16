@@ -13,6 +13,7 @@ from .models import (
 )
 
 from life_simulation.gemini_client import generate_json, generate_json_with_image
+from life_simulation.date_utils import get_selected_date
 
 try:
     from subscriptions.decorators import premium_required
@@ -328,14 +329,13 @@ def diet_home(request):
     profile = request.user.diet_profile
     today   = timezone.localdate()
 
-    date_str = request.GET.get('date')
-    try:
-        selected_date = date.fromisoformat(date_str) if date_str else today
-    except ValueError:
-        selected_date = today
+    selected_date = get_selected_date(request)
 
-    prev_date = selected_date - timedelta(days=1)
-    next_date = selected_date + timedelta(days=1)
+    # FIX: .isoformat() added — same bug as the Willpower tracker. Without
+    # this, prev_date/next_date were `date` objects rendered by Django's
+    # DATE_FORMAT (non-ISO) in the template, breaking every ?date= link.
+    prev_date = (selected_date - timedelta(days=1)).isoformat()
+    next_date = (selected_date + timedelta(days=1)).isoformat()
     is_today  = (selected_date == today)
 
     meals    = MealLog.objects.filter(user=request.user, date=selected_date)
@@ -434,10 +434,20 @@ def add_meal(request):
     carb = float(request.POST.get('carbs_g', 0))
     fat  = float(request.POST.get('fat_g', 0))
 
+    today = timezone.localdate()
     try:
-        log_date = date.fromisoformat(date_str) if date_str else timezone.localdate()
+        log_date = date.fromisoformat(date_str) if date_str else today
     except ValueError:
-        log_date = timezone.localdate()
+        log_date = today
+
+    # Server-side guard: food logging is a TODAY-ONLY action. Past days are
+    # read-only history and future days are no longer a "planning mode" —
+    # logging must always reflect what you actually ate, not a pre-filled
+    # plan, so any date other than today is rejected here regardless of
+    # what the frontend shows or allows through.
+    if log_date != today:
+        messages.error(request, "You can only log food for today — past and future days are view-only.")
+        return redirect(f'/diet/?date={log_date}')
 
     food_item = None
     if food_id:
@@ -492,7 +502,11 @@ def add_meal(request):
 @premium_required("Diet Tracker")
 def analyze_meal_photo(request):
     """Step 1: user uploads a meal photo. We save it, send it to the AI
-    vision model and return a full breakdown (items + macros) for review."""
+    vision model and return a full breakdown (items + macros) for review.
+
+    No `date` is posted at this step (the frontend only renders the photo
+    uploader for today anyway), so the real date guard lives in
+    confirm_meal_photo below, where the entries actually get created."""
     if request.method != 'POST' or 'image' not in request.FILES:
         return JsonResponse({'success': False, 'error': 'No image provided'}, status=400)
 
@@ -551,10 +565,18 @@ def confirm_meal_photo(request):
     image_name = request.POST.get('image_name', '').strip()
     items_json = request.POST.get('items_json', '[]')
 
+    today = timezone.localdate()
     try:
-        log_date = date.fromisoformat(date_str) if date_str else timezone.localdate()
+        log_date = date.fromisoformat(date_str) if date_str else today
     except ValueError:
-        log_date = timezone.localdate()
+        log_date = today
+
+    # Server-side guard: photo logging is a "today only" feature — the AI
+    # analyzed a photo taken right now, so it can't retroactively (or
+    # pre-emptively) belong to a different day.
+    if log_date != today:
+        messages.error(request, "Photo logging is only available for today's entries.")
+        return redirect(f'/diet/?date={log_date}')
 
     try:
         items = json.loads(items_json)
@@ -604,6 +626,15 @@ def confirm_meal_photo(request):
 def delete_meal(request, meal_id):
     meal     = get_object_or_404(MealLog, id=meal_id, user=request.user)
     log_date = meal.date
+
+    # Deleting is a TODAY-ONLY action, same as add_meal above — past entries
+    # stay read-only history, and future entries can no longer exist at all
+    # (add_meal blocks them), so this now simply guards against anything
+    # that isn't today rather than only blocking the past.
+    if log_date != timezone.localdate():
+        messages.error(request, "You can only remove meals logged for today.")
+        return redirect(f'/diet/?date={log_date}')
+
     meal.delete()
     recalculate_diet_log(request.user, log_date)
     messages.success(request, 'Meal removed.')
@@ -613,7 +644,14 @@ def delete_meal(request, meal_id):
 @login_required
 @premium_required("Diet Tracker")
 def toggle_cheat(request, meal_id):
-    meal          = get_object_or_404(MealLog, id=meal_id, user=request.user)
+    meal = get_object_or_404(MealLog, id=meal_id, user=request.user)
+
+    # Cheat-meal toggle is a today-only action, same as the complete/skip
+    # style actions on the other trackers.
+    if meal.date != timezone.localdate():
+        messages.error(request, "This action is only allowed for today's entries.")
+        return redirect(f'/diet/?date={meal.date}')
+
     meal.is_cheat = not meal.is_cheat
     meal.save()
     recalculate_diet_log(request.user, meal.date)

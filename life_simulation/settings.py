@@ -85,20 +85,16 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-
-    # WhiteNoise
     "whitenoise.middleware.WhiteNoiseMiddleware",
-
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "life_simulation.middleware.SelectedDateMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "life_simulation.middleware.UserTimezoneMiddleware",
+    "life_simulation.middleware.UserTimezoneMiddleware",   # ← ab pehle
+    "life_simulation.middleware.SelectedDateMiddleware",   # ← ab timezone-aware "today" milega
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
-
 ROOT_URLCONF = "life_simulation.urls"
 
 # ==========================
@@ -343,7 +339,7 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False  # must stay False: JS needs to read this token to send it back
 
-SECURE_SSL_REDIRECT = not DEBUG
+SECURE_SSL_REDIRECT = False
 SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000  # 1 year, only once confirmed working on HTTPS
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG

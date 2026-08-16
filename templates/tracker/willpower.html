@@ -71,25 +71,38 @@
 </div>
 
 <!-- ── Date Navigation ── -->
-<div class="date-nav" style="margin-bottom:1.2rem;">
-  <a href="/tracker/willpower/?date={{ prev_date }}" class="date-arrow">‹</a>
+<div class="date-nav" style="margin-bottom:1.2rem;" data-mascot-target="date-nav-panel">
+  <a href="/tracker/willpower/?date={{ prev_date }}" class="date-arrow" title="Previous Day">‹</a>
   <div class="date-center">
-    <span class="date-label">{% if is_today %}Today{% else %}{{ selected_date|date:"l" }}{% endif %}</span>
+    <span class="date-label">
+      {% if is_today %}Today
+      {% elif selected_date > today %}{{ selected_date|date:"l" }} (Future)
+      {% else %}{{ selected_date|date:"l" }}{% endif %}
+    </span>
     <span class="date-value">{{ selected_date|date:"d M Y" }}</span>
     <input type="date" id="date-picker" value="{{ selected_date|date:'Y-m-d' }}"
-      max="{{ today|date:'Y-m-d' }}"
       onchange="window.location='/tracker/willpower/?date='+this.value"
-      class="date-picker-input" />
+      class="date-picker-input" data-mascot-target="date-picker-input" />
   </div>
-  <a href="/tracker/willpower/?date={{ next_date }}" class="date-arrow">›</a>
+  <a href="/tracker/willpower/?date={{ next_date }}" class="date-arrow" title="Next Day">›</a>
 </div>
+
+{% if selected_date > today %}
+<div style="background:var(--accent-glow);border:1px solid var(--accent)44;border-radius:10px;padding:0.65rem 1rem;margin-bottom:1.2rem;font-size:0.85rem;color:var(--accent-hover);display:flex;align-items:center;gap:0.5rem;">
+  <i data-lucide="calendar-plus" class="lucide"></i> <strong>Planning Mode</strong> — add challenges for this day; complete/skip only available on the actual day.
+</div>
+{% elif selected_date < today %}
+<div style="background:rgba(245,158,11,.08);border:1px solid var(--gold)44;border-radius:10px;padding:0.65rem 1rem;margin-bottom:1.2rem;font-size:0.85rem;color:var(--gold);display:flex;align-items:center;gap:0.5rem;">
+  <i data-lucide="book-open" class="lucide"></i> <strong>Read Only</strong> — this is a past day, no changes allowed.
+</div>
+{% endif %}
 
 <div class="wp-layout">
   <!-- ═══ MAIN COLUMN ═══ -->
   <div>
     <!-- ── Stats ── -->
     <div class="wp-stats-row">
-      <div class="wp-stat">
+      <div class="wp-stat" data-mascot-target="wp-stat-xp">
         <div class="ic" style="background:rgba(59,130,246,.15);"><i data-lucide="zap" class="lucide" style="color:var(--blue);width:16px;height:16px;"></i></div>
         <div class="lbl">WP XP Today</div>
         <div class="v" id="wp-points-value" style="color:{% if wp_points > 0 %}var(--win-color){% elif wp_points < 0 %}var(--lose-color){% else %}var(--text-secondary){% endif %};">
@@ -98,25 +111,25 @@
         <div class="d">Today's Earned</div>
         <div class="mini-track"><div class="mini-fill" style="width:{{ wp_points|default:0 }}%;"></div></div>
       </div>
-      <div class="wp-stat">
+      <div class="wp-stat" data-mascot-target="wp-stat-completed">
         <div class="ic" style="background:rgba(16,185,129,.15);"><i data-lucide="check-circle-2" class="lucide" style="color:var(--green);width:16px;height:16px;"></i></div>
         <div class="lbl">Completed</div>
         <div class="v" style="color:var(--win-color);" id="wp-completed-count">{{ completed.count }}</div>
         <div class="d">Challenges Done</div>
       </div>
-      <div class="wp-stat">
+      <div class="wp-stat" data-mascot-target="wp-stat-skipped">
         <div class="ic" style="background:rgba(239,68,68,.15);"><i data-lucide="x-circle" class="lucide" style="color:var(--red);width:16px;height:16px;"></i></div>
         <div class="lbl">Skipped</div>
         <div class="v" style="color:var(--lose-color);" id="wp-skipped-count">{{ skipped.count }}</div>
         <div class="d">Challenges Skipped</div>
       </div>
-      <div class="wp-stat">
+      <div class="wp-stat" data-mascot-target="wp-stat-total">
         <div class="ic" style="background:rgba(124,58,237,.15);"><i data-lucide="star" class="lucide" style="color:var(--accent);width:16px;height:16px;"></i></div>
         <div class="lbl">Total</div>
         <div class="v" style="color:var(--accent);" id="wp-total-count">{{ tasks.count }}</div>
         <div class="d">Total Challenges</div>
       </div>
-      <div class="wp-stat">
+      <div class="wp-stat" data-mascot-target="wp-stat-streak">
         <div class="ic" style="background:rgba(245,158,11,.15);"><i data-lucide="flame" class="lucide" style="color:var(--gold);width:16px;height:16px;"></i></div>
         <div class="lbl">Streak</div>
         <div class="v" style="color:var(--gold);">{{ current_streak }} days</div>
@@ -149,6 +162,7 @@
           </thead>
           <tbody id="wp-tbody">
 
+            {% if selected_date >= today %}
             <tr class="add-row" id="wp-add-row">
               <td><input type="text" id="new-wp-title"
                 placeholder="Add challenge... (No sugar, No porn, Limited screen time)"
@@ -161,38 +175,60 @@
                 </button>
               </td>
             </tr>
+            {% endif %}
 
             {% for task in pending %}
-            <tr class="task-row" id="wptask-{{ task.id }}">
+            <tr class="task-row" id="wptask-{{ task.id }}" data-mascot-target="task-row-pending">
               <td class="task-name">{{ task.title }}</td>
               <td style="text-align:center;"><span class="pts-badge pts-positive">+7</span></td>
               <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
               <td style="text-align:center;">
+                {% if is_today %}
                 <div class="task-action-circles">
-                  <button class="task-circle task-circle--done" onclick="doWpTask({{ task.id }}, 'complete')" title="Mark done" aria-label="Mark done"><i data-lucide="check" class="lucide" style="width:1em;height:1em;"></i></button>
-                  <button class="task-circle task-circle--skip" onclick="doWpTask({{ task.id }}, 'skip')" title="Skip" aria-label="Skip"><i data-lucide="x" class="lucide" style="width:1em;height:1em;"></i></button>
-                  <a href="{% url 'delete_wp_task' task.id %}" class="task-circle task-circle--del"
+                  <button class="task-circle task-circle--done" onclick="doWpTask({{ task.id }}, 'complete')" data-mascot-target="willpower-complete-btn" title="Mark done" aria-label="Mark done"><i data-lucide="check" class="lucide" style="width:1em;height:1em;"></i></button>
+                  <button class="task-circle task-circle--skip" onclick="doWpTask({{ task.id }}, 'skip')" data-mascot-target="willpower-skip-btn" title="Skip" aria-label="Skip"><i data-lucide="x" class="lucide" style="width:1em;height:1em;"></i></button>
+                  <a href="{% url 'delete_wp_task' task.id %}" class="task-circle task-circle--del" data-mascot-target="willpower-delete-btn"
                     onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="lucide" style="width:1em;height:1em;"></i></a>
                 </div>
+                {% elif selected_date > today %}
+                <div class="task-action-circles">
+                  <a href="{% url 'delete_wp_task' task.id %}" class="task-circle task-circle--del" data-mascot-target="willpower-delete-btn"
+                    onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="lucide" style="width:1em;height:1em;"></i></a>
+                </div>
+                {% else %}
+                <span style="font-size:0.78rem;color:var(--text-secondary);">Read only</span>
+                {% endif %}
               </td>
             </tr>
             {% endfor %}
 
             {% for task in completed %}
-            <tr class="task-row task-done-row" id="wptask-{{ task.id }}">
+            <tr class="task-row task-done-row" id="wptask-{{ task.id }}" data-mascot-target="task-row-completed">
               <td class="task-name" style="text-decoration:line-through; opacity:0.5;">{{ task.title }}</td>
               <td style="text-align:center;"><span class="pts-badge" style="background:#10b98122;color:var(--win-color);">+7</span></td>
               <td style="text-align:center;"><span class="status-badge badge-done"><i data-lucide="check" class="lucide" style="width:1em;height:1em;"></i> Done</span></td>
-              <td style="text-align:center;"><button class="task-circle task-circle--undo" onclick="undoWpTask({{ task.id }})" title="Undo" aria-label="Undo"><i data-lucide="undo-2" class="lucide" style="width:1em;height:1em;"></i></button></td>
+              <td style="text-align:center;">
+                {% if is_today %}
+                <button class="task-circle task-circle--undo" onclick="undoWpTask({{ task.id }})" data-mascot-target="willpower-undo-btn" title="Undo" aria-label="Undo"><i data-lucide="undo-2" class="lucide" style="width:1em;height:1em;"></i></button>
+                {% else %}
+                <span style="font-size:0.78rem;color:var(--text-secondary);">—</span>
+                {% endif %}
+              </td>
             </tr>
             {% endfor %}
 
             {% for task in skipped %}
-            <tr class="task-row task-skip-row" id="wptask-{{ task.id }}">
+            <tr class="task-row task-skip-row" id="wptask-{{ task.id }}" data-mascot-target="task-row-skipped">
               <td class="task-name" style="opacity:0.4;">{{ task.title }}</td>
               <td style="text-align:center;"><span class="pts-badge pts-negative">−7</span></td>
               <td style="text-align:center;"><span class="status-badge badge-skip"><i data-lucide="skip-forward" class="lucide" style="width:1em;height:1em;"></i> Skipped</span></td>
-              <td style="text-align:center;"><button class="task-circle task-circle--undo" onclick="undoWpTask({{ task.id }})" title="Undo" aria-label="Undo"><i data-lucide="undo-2" class="lucide" style="width:1em;height:1em;"></i></button></td>
+              <td style="text-align:center;">
+                {% if is_today %}
+                <button class="task-circle task-circle--undo" onclick="undoWpTask({{ task.id }})" data-mascot-target="willpower-undo-btn" title="Undo" aria-label="Undo"><i data-lucide="undo-2" class="lucide" style="width:1em;height:1em;"></i></button>
+                {% else %}
+                <span style="font-size:0.78rem;color:var(--text-secondary);">—</span>
+                {% endif %}
+              </td>
             </tr>
             {% endfor %}
 
@@ -201,7 +237,7 @@
               <td colspan="4">
                 <div class="wp-empty">
                   <i data-lucide="clipboard-list" class="lucide wp-empty-ic" style="width:44px;height:44px;color:var(--text-muted);margin:0 auto 0.6rem;display:block;"></i>
-                  No challenges for today.<br>
+                  {% if selected_date > today %}No challenges planned — add one above.{% else %}No challenges for today.{% endif %}<br>
                   <span style="font-size:0.8rem;">Add one above and start building your willpower!</span>
                 </div>
               </td>
@@ -231,7 +267,7 @@
 
   <!-- ═══ SIDE COLUMN ═══ -->
   <div>
-    <div class="wp-side-card">
+    <div class="wp-side-card" data-mascot-target="wp-weekly-summary">
       <div class="wp-side-card__title">Weekly Summary</div>
       <div class="wp-week-dots">
         {% for d in weekly_summary %}
@@ -245,7 +281,7 @@
       </div>
     </div>
 
-    <div class="wp-side-card" style="text-align:center;">
+    <div class="wp-side-card" style="text-align:center;" data-mascot-target="wp-streak-ring">
       <div class="wp-side-card__title" style="text-align:left;">Current Streak</div>
       <div class="wp-streak-ring-wrap">
         <div style="position:relative;width:100px;height:100px;">
@@ -269,7 +305,7 @@
       </div>
     </div>
 
-    <div class="wp-side-card" style="text-align:center;">
+    <div class="wp-side-card" style="text-align:center;" data-mascot-target="wp-week-xp">
       <div class="wp-side-card__title" style="text-align:left;">XP This Week</div>
       <div style="position:relative;width:110px;height:110px;margin:0 auto;">
         <canvas id="weekPointsRing" width="110" height="110"></canvas>
@@ -300,10 +336,30 @@
 const csrfToken = '{{ csrf_token }}';
 const WP_ADD_URL = "{% url 'willpower' %}";
 const WP_SELECTED_DATE = "{{ selected_date|date:'Y-m-d' }}";
+const IS_TODAY  = {% if is_today %}true{% else %}false{% endif %};
+const IS_FUTURE = {% if selected_date > today %}true{% else %}false{% endif %};
+
+function buildWpActionsHtml(taskId) {
+  if (IS_TODAY) {
+    return `
+      <div class="task-action-circles">
+        <button class="task-circle task-circle--done" onclick="doWpTask(${taskId}, 'complete')" title="Mark done" aria-label="Mark done"><i data-lucide="check" class="lucide" style="width:1em;height:1em;"></i></button>
+        <button class="task-circle task-circle--skip" onclick="doWpTask(${taskId}, 'skip')" title="Skip" aria-label="Skip"><i data-lucide="x" class="lucide" style="width:1em;height:1em;"></i></button>
+        <a href="/tracker/willpower/delete/${taskId}/" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="lucide" style="width:1em;height:1em;"></i></a>
+      </div>`;
+  } else if (IS_FUTURE) {
+    return `
+      <div class="task-action-circles">
+        <a href="/tracker/willpower/delete/${taskId}/" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="lucide" style="width:1em;height:1em;"></i></a>
+      </div>`;
+  }
+  return `<span style="font-size:0.78rem;color:var(--text-secondary);">Read only</span>`;
+}
 
 async function submitNewWpTask() {
   const titleInput = document.getElementById('new-wp-title');
   const addBtn      = document.getElementById('add-wp-btn');
+  if (!titleInput || !addBtn) return;
   const title = titleInput.value.trim();
   if (!title) { titleInput.focus(); return; }
 
@@ -343,15 +399,10 @@ async function submitNewWpTask() {
       <td class="task-name">${data.title}</td>
       <td style="text-align:center;"><span class="pts-badge pts-positive">+7</span></td>
       <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
-      <td style="text-align:center;">
-        <div class="task-action-circles">
-          <button class="task-circle task-circle--done" onclick="doWpTask(${data.task_id}, 'complete')" title="Mark done" aria-label="Mark done"><i data-lucide="check" class="lucide" style="width:1em;height:1em;"></i></button>
-          <button class="task-circle task-circle--skip" onclick="doWpTask(${data.task_id}, 'skip')" title="Skip" aria-label="Skip"><i data-lucide="x" class="lucide" style="width:1em;height:1em;"></i></button>
-          <a href="/tracker/willpower/delete/${data.task_id}/" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="lucide" style="width:1em;height:1em;"></i></a>
-        </div>
-      </td>
+      <td style="text-align:center;">${buildWpActionsHtml(data.task_id)}</td>
     `;
-    document.getElementById('wp-add-row').after(tr);
+    const addRow = document.getElementById('wp-add-row');
+    if (addRow) addRow.after(tr); else document.getElementById('wp-tbody').prepend(tr);
     requestAnimationFrame(() => { tr.style.transition = 'opacity 0.25s ease'; tr.style.opacity = '1'; });
 
     titleInput.value = '';
@@ -377,6 +428,8 @@ function updateWpStats(data) {
 }
 
 async function doWpTask(taskId, action) {
+  if (!IS_TODAY) return; // safety net — buttons that call this only render when IS_TODAY anyway
+
   const url = action === 'complete'
     ? `/tracker/willpower/complete/${taskId}/`
     : `/tracker/willpower/skip/${taskId}/`;
@@ -419,6 +472,8 @@ async function doWpTask(taskId, action) {
 }
 
 async function undoWpTask(taskId) {
+  if (!IS_TODAY) return;
+
   const res = await fetch(`/tracker/willpower/undo/${taskId}/`, {
     method: 'POST',
     headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
@@ -439,12 +494,7 @@ async function undoWpTask(taskId) {
     const statusCell = row.children[2];
     if (statusCell) statusCell.innerHTML = '<span class="status-badge badge-pending">Pending</span>';
     const actionCell = row.children[3];
-    if (actionCell) actionCell.innerHTML = `
-      <div class="task-action-circles">
-        <button class="task-circle task-circle--done" onclick="doWpTask(${taskId}, 'complete')" title="Mark done" aria-label="Mark done"><i data-lucide="check" class="lucide" style="width:1em;height:1em;"></i></button>
-        <button class="task-circle task-circle--skip" onclick="doWpTask(${taskId}, 'skip')" title="Skip" aria-label="Skip"><i data-lucide="x" class="lucide" style="width:1em;height:1em;"></i></button>
-        <a href="/tracker/willpower/delete/${taskId}/" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="lucide" style="width:1em;height:1em;"></i></a>
-      </div>`;
+    if (actionCell) actionCell.innerHTML = buildWpActionsHtml(taskId);
     if (window.refreshIcons) window.refreshIcons();
   }
 

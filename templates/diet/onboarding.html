@@ -12,7 +12,7 @@
     <p style="color:var(--text-secondary);font-size:1rem;">Choose your physique goal — AI will build a personalized plan for you.</p>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.25rem;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.25rem;" data-mascot-target="diet-goal-cards">
     {% for key, card in physique_cards.items %}
     <a href="{% url 'diet_onboarding_details' %}?goal={{ key }}"
        class="physique-card"

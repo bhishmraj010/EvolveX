@@ -74,7 +74,7 @@
 {% endif %}
 
 <!-- ── Date Navigation ── -->
-<div class="date-nav" style="margin-bottom:1.2rem;">
+<div class="date-nav" style="margin-bottom:1.2rem;" data-mascot-target="date-nav-panel">
   <a href="/dashboard/todo/?date={{ prev_date }}" class="date-arrow" title="Previous Day">‹</a>
   <div class="date-center">
     <span class="date-label">
@@ -85,7 +85,7 @@
     <span class="date-value">{{ selected_date|date:"d M Y" }}</span>
     <input type="date" id="date-picker" value="{{ selected_date|date:'Y-m-d' }}"
       onchange="window.location='/dashboard/todo/?date='+this.value"
-      class="date-picker-input" />
+      class="date-picker-input" data-mascot-target="date-picker-input" />
   </div>
   <a href="/dashboard/todo/?date={{ next_date }}" class="date-arrow" title="Next Day">›</a>
 </div>
@@ -102,7 +102,7 @@
 
 <!-- ── Stat cards ── -->
 <div class="td-stats-row">
-  <div class="td-stat">
+  <div class="td-stat" data-mascot-target="td-stat-tasks-done">
     <div>
       <div class="lbl">Tasks Done</div>
       <div class="big" id="tasks-done-count">{{ tasks_done_ct }} / {{ tasks_total_ct }}</div>
@@ -110,7 +110,7 @@
     </div>
     <div class="ic-badge"><i data-lucide="check-circle-2" class="lucide" style="color:var(--green);"></i></div>
   </div>
-  <div class="td-stat">
+  <div class="td-stat" data-mascot-target="td-stat-completed">
     <div>
       <div class="lbl">Completed Tasks</div>
       <div class="big" id="completed-count">{{ completed|length }}</div>
@@ -118,7 +118,7 @@
     </div>
     <div class="ic-badge"><i data-lucide="check-check" class="lucide" style="color:var(--win-color);"></i></div>
   </div>
-  <div class="td-stat">
+  <div class="td-stat" data-mascot-target="td-stat-skipped">
     <div>
       <div class="lbl">Skipped Tasks</div>
       <div class="big" id="skipped-count">{{ skipped|length }}</div>
@@ -126,7 +126,7 @@
     </div>
     <div class="ic-badge"><i data-lucide="skip-forward" class="lucide" style="color:var(--lose-color);"></i></div>
   </div>
-  <div class="td-stat">
+  <div class="td-stat" data-mascot-target="td-stat-xp">
     <div>
       <div class="lbl">Task XP</div>
       <div class="big" id="total-points">{{ log.total_points }}</div>
@@ -143,7 +143,7 @@
 {% endif %}
 
 <!-- ── Progress Bar ── -->
-<div class="td-progress-card">
+<div class="td-progress-card" data-mascot-target="td-progress-bar">
   <div style="display:flex;justify-content:space-between;">
     <span class="lbl" style="color:var(--text-secondary);font-size:0.85rem;">Daily Progress</span>
     <span class="lbl" style="color:var(--text-secondary);font-size:0.85rem;" id="progress-label">{{ log.total_points }}/{{ win_pts }}</span>
@@ -169,7 +169,7 @@
     <div class="td-task-card__title"><i data-lucide="list-checks" class="lucide"></i> Today's Tasks</div>
     <div style="display:flex;align-items:center;gap:0.9rem;">
       <span class="td-meta">Win = {{ win_pts }}XP | Survive = {{ survive_pts }}XP | Level {{ user.level }}</span>
-      <button type="button" class="td-filter-btn"><i data-lucide="filter" class="lucide"></i> Filter</button>
+      <button type="button" class="td-filter-btn" data-mascot-target="td-filter-btn"><i data-lucide="filter" class="lucide"></i> Filter</button>
     </div>
   </div>
 
@@ -201,7 +201,7 @@
           <td style="text-align:center; color:var(--text-secondary);">—</td>
           <td style="text-align:center;"><span class="status-badge badge-pending">Pending</span></td>
           <td style="text-align:center;">
-            <button type="button" class="btn" id="add-task-btn" style="padding:0.35rem 1.1rem; font-size:0.85rem;display:inline-flex;align-items:center;gap:0.3rem;">
+            <button type="button" class="btn" id="add-task-btn" data-mascot-target="add-task-btn" style="padding:0.35rem 1.1rem; font-size:0.85rem;display:inline-flex;align-items:center;gap:0.3rem;">
               <i data-lucide="plus" class="td-icon-inline lucide"></i> Add
             </button>
           </td>
@@ -209,7 +209,7 @@
         {% endif %}
 
         {% for task in pending %}
-        <tr class="task-row" id="task-{{ task.id }}" data-points="{{ task.get_points }}">
+        <tr class="task-row" id="task-{{ task.id }}" data-points="{{ task.get_points }}" data-mascot-target="task-row-pending">
           <td class="task-name">{{ task.title }}</td>
           <td style="text-align:center;"><span class="stars-cell">{{ task.stars }}</span></td>
           <td style="text-align:center;"><span class="pts-badge pts-positive">+{{ task.get_points }}</span></td>
@@ -217,11 +217,11 @@
           <td style="text-align:center;">
             <div class="task-action-circles">
               {% if is_today %}
-                <button class="task-circle task-circle--done" onclick="doTask({{ task.id }}, 'complete')" title="Mark done" aria-label="Mark done"><i data-lucide="check" class="td-icon-inline lucide"></i></button>
-                <button class="task-circle task-circle--skip" onclick="doTask({{ task.id }}, 'skip')" title="Skip" aria-label="Skip"><i data-lucide="x" class="td-icon-inline lucide"></i></button>
-                <a href="{% url 'delete_task' task.id %}" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="td-icon-inline lucide"></i></a>
+                <button class="task-circle task-circle--done" data-mascot-target="task-complete-btn" onclick="doTask({{ task.id }}, 'complete')" title="Mark done" aria-label="Mark done"><i data-lucide="check" class="td-icon-inline lucide"></i></button>
+                <button class="task-circle task-circle--skip" data-mascot-target="task-skip-btn" onclick="doTask({{ task.id }}, 'skip')" title="Skip" aria-label="Skip"><i data-lucide="x" class="td-icon-inline lucide"></i></button>
+                <a href="{% url 'delete_task' task.id %}" class="task-circle task-circle--del" data-mascot-target="task-delete-btn" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="td-icon-inline lucide"></i></a>
               {% elif selected_date > today %}
-                <a href="{% url 'delete_task' task.id %}" class="task-circle task-circle--del" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="td-icon-inline lucide"></i></a>
+                <a href="{% url 'delete_task' task.id %}" class="task-circle task-circle--del" data-mascot-target="task-delete-btn" onclick="return confirm('Delete?')" title="Delete" aria-label="Delete"><i data-lucide="trash-2" class="td-icon-inline lucide"></i></a>
               {% else %}
                 <span style="font-size:0.78rem;color:var(--text-secondary);">Read only</span>
               {% endif %}
@@ -231,14 +231,14 @@
         {% endfor %}
 
         {% for task in completed %}
-        <tr class="task-row task-done-row" id="task-{{ task.id }}" data-points="{{ task.get_points }}">
+        <tr class="task-row task-done-row" id="task-{{ task.id }}" data-points="{{ task.get_points }}" data-mascot-target="task-row-completed">
           <td class="task-name" style="text-decoration:line-through; opacity:0.5;">{{ task.title }}</td>
           <td style="text-align:center; opacity:0.5;"><span class="stars-cell">{{ task.stars }}</span></td>
           <td style="text-align:center;"><span class="pts-badge" style="background:#10b98122;color:var(--win-color);">+{{ task.get_points }}</span></td>
           <td style="text-align:center;"><span class="status-badge badge-done"><i data-lucide="check" class="td-icon-inline lucide"></i> Done</span></td>
           <td style="text-align:center;">
             {% if is_today %}
-              <button class="task-circle task-circle--undo" onclick="undoTask({{ task.id }})" title="Undo" aria-label="Undo"><i data-lucide="undo-2" class="td-icon-inline lucide"></i></button>
+              <button class="task-circle task-circle--undo" data-mascot-target="task-undo-btn" onclick="undoTask({{ task.id }})" title="Undo" aria-label="Undo"><i data-lucide="undo-2" class="td-icon-inline lucide"></i></button>
             {% else %}
               <span style="font-size:0.78rem;color:var(--text-secondary);">—</span>
             {% endif %}
@@ -247,14 +247,14 @@
         {% endfor %}
 
         {% for task in skipped %}
-        <tr class="task-row task-skip-row" id="task-{{ task.id }}" data-points="{{ task.get_points }}">
+        <tr class="task-row task-skip-row" id="task-{{ task.id }}" data-points="{{ task.get_points }}" data-mascot-target="task-row-skipped">
           <td class="task-name" style="opacity:0.4;">{{ task.title }}</td>
           <td style="text-align:center; opacity:0.4;"><span class="stars-cell">{{ task.stars }}</span></td>
           <td style="text-align:center;"><span class="pts-badge pts-negative">−3</span></td>
           <td style="text-align:center;"><span class="status-badge badge-skip"><i data-lucide="skip-forward" class="td-icon-inline lucide"></i> Skipped</span></td>
           <td style="text-align:center;">
             {% if is_today %}
-              <button class="task-circle task-circle--undo" onclick="undoTask({{ task.id }})" title="Undo" aria-label="Undo"><i data-lucide="undo-2" class="td-icon-inline lucide"></i></button>
+              <button class="task-circle task-circle--undo" data-mascot-target="task-undo-btn" onclick="undoTask({{ task.id }})" title="Undo" aria-label="Undo"><i data-lucide="undo-2" class="td-icon-inline lucide"></i></button>
             {% else %}
               <span style="font-size:0.78rem;color:var(--text-secondary);">—</span>
             {% endif %}

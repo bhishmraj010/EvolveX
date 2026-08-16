@@ -224,7 +224,7 @@
         </button>
       </div>
 
-      <div class="pr-level-bar-row">
+      <div class="pr-level-bar-row" data-mascot-target="profile-level-bar">
         <div class="pr-level-pill"><i data-lucide="shield" class="lucide" style="width:14px;height:14px;"></i> Level {{ user.level }}</div>
         <div class="pr-level-track"><div class="pr-level-fill" style="width:{{ xp_pct }}%;"></div></div>
         <div style="font-size:0.78rem;color:var(--text-secondary);white-space:nowrap;">
@@ -238,7 +238,7 @@
 
     <div class="pr-card">
       <div class="pr-side-title"><i data-lucide="zap" class="lucide"></i> Warrior Stats</div>
-      <div class="pr-stats-grid">
+      <div class="pr-stats-grid" data-mascot-target="profile-warrior-stats">
         <div class="pr-stat"><div class="v" style="color:var(--accent);">{{ user.level }}</div><div class="l">Level</div></div>
         <div class="pr-stat"><div class="v" style="color:var(--blue);">{{ user.total_xp }}</div><div class="l">Total XP</div></div>
         <div class="pr-stat"><div class="v" style="color:var(--green);">{{ win_days }}</div><div class="l">Win Days</div></div>
@@ -255,19 +255,19 @@
 
       <!-- ═══ Mini nav: Account Info / Change Password / My Journals / Guilds / Rewards ═══ -->
       <div class="pr-mini-nav">
-        <button type="button" class="pr-mini-tab active" data-mini="account">
+        <button type="button" class="pr-mini-tab active" data-mini="account" data-mascot-target="profile-account-tab">
           <i data-lucide="user" class="lucide"></i> Account Information
         </button>
-        <button type="button" class="pr-mini-tab" data-mini="password">
+        <button type="button" class="pr-mini-tab" data-mini="password" data-mascot-target="profile-password-tab">
           <i data-lucide="lock" class="lucide"></i> Change Password
         </button>
-        <button type="button" class="pr-mini-tab" data-mini="journals">
+        <button type="button" class="pr-mini-tab" data-mini="journals" data-mascot-target="profile-journal-tab">
           <i data-lucide="book-open" class="lucide"></i> My Journals
         </button>
-        <button type="button" class="pr-mini-tab" data-mini="guilds">
+        <button type="button" class="pr-mini-tab" data-mini="guilds" data-mascot-target="profile-guilds-tab">
           <i data-lucide="users" class="lucide"></i> Guilds
         </button>
-        <button type="button" class="pr-mini-tab" data-mini="rewards">
+        <button type="button" class="pr-mini-tab" data-mini="rewards" data-mascot-target="profile-rewards-tab">
           <i data-lucide="gem" class="lucide"></i> Rewards
         </button>
       </div>

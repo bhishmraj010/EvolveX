@@ -72,5 +72,8 @@ def generate_json_with_image(prompt, image_bytes, mime_type="image/jpeg", model=
         )
         text = resp.text.strip().replace("```json", "").replace("```", "").strip()
         return json.loads(text)
-    except Exception:
+    except Exception as e:
+        import traceback
+        print(f"[GEMINI ERROR] generate_json_with_image failed: {e}")
+        traceback.print_exc()
         return None

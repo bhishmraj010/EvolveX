@@ -187,10 +187,10 @@
             <label>Your Goal</label>
             <div class="rm-input-wrap rm-icon-right">
               <input type="text" name="goal" placeholder="e.g. Become a Full Stack Developer" required
-                     value="{{ goal|default:'' }}" id="rm-goal-input">
+                     value="{{ goal|default:'' }}" id="rm-goal-input" data-mascot-target="roadmap-goal-input">
               <i data-lucide="sparkles" class="lucide rm-input-icon rm-sparkle"></i>
             </div>
-            <div class="rm-examples">
+            <div class="rm-examples" data-mascot-target="roadmap-example-chips">
               <span class="rm-example-chip" onclick="document.getElementById('rm-goal-input').value=this.dataset.g" data-g="Learn Python"><i data-lucide="code" class="lucide"></i> Learn Python</span>
               <span class="rm-example-chip" onclick="document.getElementById('rm-goal-input').value=this.dataset.g" data-g="Become Full Stack Developer"><i data-lucide="layers" class="lucide"></i> Become Full Stack Developer</span>
               <span class="rm-example-chip" onclick="document.getElementById('rm-goal-input').value=this.dataset.g" data-g="Crack GATE CSE"><i data-lucide="graduation-cap" class="lucide"></i> Crack GATE CSE</span>
@@ -274,7 +274,7 @@
             </div>
           </div>
 
-          <button type="submit" class="rm-submit">
+          <button type="submit" class="rm-submit" data-mascot-target="roadmap-generate-btn">
             <i data-lucide="wand-2" class="lucide"></i> Generate My Roadmap
           </button>
         </form>

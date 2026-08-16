@@ -1,0 +1,207 @@
+{% load static %}
+{% comment %}
+  Mascot widget — include this near the end of base.html, right before
+  {% static 'js/mascot.js' %} is loaded. It matches the element IDs your
+  mascot.js already expects:
+    #mascot-container, #mascot-speech-bubble, #mascot-text,
+    #mascot-avatar, #mascot-close, #mascot-continue-btn
+  and the .mascot-dim-overlay / .mascot-highlight classes it toggles.
+
+  Before loading mascot.js, set:
+    <script>window.MASCOT_AUTH = {{ user.is_authenticated|yesno:"true,false" }};</script>
+{% endcomment %}
+
+<style>
+  .mascot-dim-mask{
+    position:fixed; z-index:900;
+    background:rgba(4,4,8,.68);
+    opacity:0; pointer-events:none;
+    transition:opacity .3s ease, top .2s ease, left .2s ease, width .2s ease, height .2s ease;
+  }
+  .mascot-dim-mask.active{ opacity:1; pointer-events:auto; }
+
+  .mascot-highlight{
+    position:relative !important; z-index:901 !important;
+    isolation:isolate;
+    transform:scale(1.015);
+    border-radius:inherit;
+    box-shadow:
+      0 0 0 2px rgba(255,255,255,.95),
+      0 0 22px 4px rgba(255,255,255,.65),
+      0 0 55px 14px rgba(124,92,252,.4);
+    transition:transform .25s ease, box-shadow .25s ease;
+    animation:mascotHighlightPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes mascotHighlightPulse{
+    0%,100%{
+      box-shadow:
+        0 0 0 2px rgba(255,255,255,.9),
+        0 0 20px 4px rgba(255,255,255,.55),
+        0 0 48px 12px rgba(124,92,252,.35);
+    }
+    50%{
+      box-shadow:
+        0 0 0 3px rgba(255,255,255,1),
+        0 0 30px 8px rgba(255,255,255,.8),
+        0 0 65px 18px rgba(124,92,252,.5);
+    }
+  }
+
+  .mascot-container{
+    position:fixed; bottom:2rem; right:2rem; z-index:960;
+    display:flex; align-items:flex-start; gap:14px;
+    pointer-events:none;
+    transition:top .45s cubic-bezier(.4,0,.2,1), left .45s cubic-bezier(.4,0,.2,1);
+    font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  /* ---- Avatar: circle when idle, full body while actively guiding ---- */
+  .mascot-avatar{
+    pointer-events:auto; position:relative;
+    width:110px; height:110px; flex-shrink:0;
+    border:none; padding:0; background:#0a0b11; cursor:pointer;
+    border-radius:50%; overflow:hidden;
+    animation:mascotFloat 4.5s ease-in-out infinite;
+    transition:width .45s cubic-bezier(.4,0,.2,1), height .45s cubic-bezier(.4,0,.2,1),
+               border-radius .45s ease, background .3s ease;
+  }
+  .mascot-avatar-glow{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:130%; height:130%; border-radius:50%;
+    background:radial-gradient(circle, rgba(124,92,252,.55), rgba(124,92,252,.15) 55%, transparent 72%);
+    filter:blur(8px);
+    animation:mascotPulseGlow 3s ease-in-out infinite;
+    transition:width .45s ease, height .45s ease, border-radius .45s ease;
+  }
+  .mascot-avatar-img{
+    position:relative; width:100%; height:100%;
+    object-fit:cover; object-position:top center;
+    filter:drop-shadow(0 0 0 transparent);
+    transition:transform .25s ease, object-fit .1s ease;
+  }
+  .mascot-avatar:hover .mascot-avatar-img{ transform:scale(1.05); }
+
+  /* Full body — only while the speech bubble is actively guiding the user */
+  .mascot-speech-bubble.active ~ .mascot-avatar{
+    width:190px; height:300px; border-radius:20px; background:transparent;
+  }
+  .mascot-speech-bubble.active ~ .mascot-avatar .mascot-avatar-glow{
+    width:78%; height:46%; top:auto; bottom:6%; left:50%; transform:translateX(-50%);
+    border-radius:50%; filter:blur(16px);
+  }
+  .mascot-speech-bubble.active ~ .mascot-avatar .mascot-avatar-img{
+    object-fit:contain; object-position:bottom center;
+    filter:drop-shadow(0 18px 34px rgba(90,50,255,.55)) drop-shadow(0 0 22px rgba(124,92,252,.35));
+  }
+
+  @keyframes mascotFloat{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-8px); } }
+  @keyframes mascotPulseGlow{ 0%,100%{ opacity:.7; } 50%{ opacity:1; } }
+
+  /* ---- Speech bubble ---- */
+  .mascot-speech-bubble{
+    pointer-events:none; opacity:0;
+    transform:translateY(12px) scale(.95); transform-origin:bottom right;
+    transition:opacity .3s ease, transform .3s ease;
+    position:relative; width:320px; max-width:calc(100vw - 170px);
+    background:
+      radial-gradient(ellipse 120% 100% at 0% 0%, rgba(124,92,252,.16), transparent 60%),
+      linear-gradient(180deg, rgba(13,14,20,.94), rgba(9,10,15,.94));
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:20px;
+    padding:18px 20px 20px;
+    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    box-shadow:0 24px 60px -20px rgba(90,50,255,.5), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .mascot-speech-bubble.active{ opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
+
+  .mascot-bubble-tail{
+    position:absolute; right:-9px; top:28px; width:18px; height:18px;
+    background:#0d0e14;
+    border-right:1px solid rgba(255,255,255,.10);
+    border-bottom:1px solid rgba(255,255,255,.10);
+    transform:rotate(-45deg); border-radius:0 0 4px 0;
+  }
+
+  .mascot-bubble-eyebrow{
+    display:flex; align-items:center; gap:7px;
+    font-size:.68rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+    color:#b6a3ff; margin-bottom:8px;
+  }
+  .mascot-dot{
+    width:6px; height:6px; border-radius:50%; background:#a78bfa;
+    animation:mascotDotPulse 2s ease-in-out infinite;
+  }
+  @keyframes mascotDotPulse{
+    0%,100%{ opacity:1; box-shadow:0 0 0 0 rgba(124,92,252,.5); }
+    50%{ opacity:.6; box-shadow:0 0 0 4px rgba(124,92,252,0); }
+  }
+
+  .mascot-text{ margin:0; font-size:.96rem; line-height:1.65; color:#e8e9f0; min-height:1.4em; }
+  .mascot-text strong{ color:#c9c2ff; font-weight:700; }
+
+  .mascot-close{
+    position:absolute; top:10px; right:10px; width:22px; height:22px; padding:0;
+    border-radius:50%; border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.05); color:#9095a6;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; line-height:1; cursor:pointer;
+    transition:background .2s ease, color .2s ease;
+  }
+  .mascot-close:hover{ background:rgba(255,255,255,.12); color:#fff; }
+
+  .mascot-continue-btn{
+    display:none; margin-top:14px; width:100%;
+    align-items:center; justify-content:center; gap:8px;
+    background:linear-gradient(135deg,#9b7dff,#5b3fd9); border:none; color:#fff;
+    font-family:inherit; font-weight:700; font-size:.82rem;
+    padding:10px 18px; border-radius:60px; cursor:pointer;
+    box-shadow:0 10px 24px -8px rgba(90,50,255,.55);
+    transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .mascot-continue-btn:hover{ transform:translateY(-1px); box-shadow:0 14px 30px -8px rgba(90,50,255,.65); }
+
+  @media (max-width:640px){
+    .mascot-container{ bottom:1rem; right:1rem; gap:10px; }
+    .mascot-avatar{ width:76px; height:76px; }
+    .mascot-speech-bubble.active ~ .mascot-avatar{ width:130px; height:210px; }
+    .mascot-speech-bubble{ width:calc(100vw - 160px); padding:14px 16px 16px; }
+    .mascot-bubble-tail{ top:20px; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .mascot-avatar, .mascot-avatar-glow, .mascot-dot, .mascot-highlight{ animation:none !important; }
+  }
+
+  .mascot-force-hidden{ display:none !important; }
+  .mascot-target-confirmed{ animation:mascotConfirmFlash .5s ease; }
+  @keyframes mascotConfirmFlash{
+    0%{ box-shadow:0 0 0 4px rgba(16,185,129,.6); }
+    100%{ box-shadow:0 0 0 4px rgba(16,185,129,0); }
+  }
+</style>
+
+<div class="mascot-container" id="mascot-container">
+
+  <div class="mascot-speech-bubble" id="mascot-speech-bubble">
+    <button class="mascot-close" id="mascot-close" type="button" aria-label="Close">&times;</button>
+
+    <div class="mascot-bubble-eyebrow">
+      <span class="mascot-dot" aria-hidden="true"></span>
+      Ghost &middot; Your Guide
+    </div>
+
+    <p class="mascot-text" id="mascot-text"></p>
+
+    <button class="mascot-continue-btn" id="mascot-continue-btn" type="button">
+      <span>Continue</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+
+    <div class="mascot-bubble-tail" aria-hidden="true"></div>
+  </div>
+
+  <button class="mascot-avatar" id="mascot-avatar" type="button" aria-label="Open Ghost guide">
+    <span class="mascot-avatar-glow" aria-hidden="true"></span>
+    <img class="mascot-avatar-img" src="{% static 'images/mascot.png' %}" alt="Ghost mascot">
+  </button>
+
+</div>

@@ -429,7 +429,7 @@
                 <div class="rm-day-body-inner">
                   {% for task in dm.tasks %}
                   <div class="rm-mission-row">
-                    <button type="button" class="rm-mission-check {% if task.completed %}checked{% endif %}"
+                    <button type="button" class="rm-mission-check {% if task.completed %}checked{% endif %}" data-mascot-target="roadmap-mission-btn"
                             onclick="rmToggleTask({{ dm.id }}, '{{ task.id }}', this)">
                       {% if task.completed %}<i data-lucide="check" class="lucide" style="width:12px;height:12px;"></i>{% endif %}
                     </button>

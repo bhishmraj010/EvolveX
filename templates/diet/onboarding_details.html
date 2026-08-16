@@ -27,12 +27,12 @@
     <p style="color:var(--text-secondary);font-size:0.9rem;">{{ card.desc }}</p>
   </div>
 
-  <form method="POST" action="{% url 'diet_onboarding_details' %}">
+  <form method="POST" action="{% url 'diet_onboarding_details' %}" data-mascot-target="diet-details-form">
     {% csrf_token %}
     <input type="hidden" name="goal" value="{{ goal }}">
 
     <!-- Personal Info -->
-    <div class="card" style="margin-bottom:1.25rem;">
+    <div class="card" style="margin-bottom:1.25rem;" data-mascot-target="diet-personal-info">
       <div class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         Personal Info
@@ -73,7 +73,7 @@
 
     <!-- Custom targets (only for custom goal) -->
     {% if goal == 'custom' %}
-    <div class="card" style="margin-bottom:1.25rem;">
+    <div class="card" style="margin-bottom:1.25rem;" data-mascot-target="diet-custom-targets">
       <div class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
         Custom Daily Targets
@@ -99,7 +99,7 @@
     </div>
     {% endif %}
 
-    <button type="submit" class="btn btn-primary" style="width:100%;padding:0.9rem;font-size:1rem;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+    <button type="submit" class="btn btn-primary" data-mascot-target="diet-generate-plan-btn" style="width:100%;padding:0.9rem;font-size:1rem;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
       {% if goal == 'custom' %}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         Save My Plan

@@ -53,7 +53,7 @@
   <div class="rm-test-header">
     <h1><i data-lucide="clipboard-check" class="lucide"></i> Checkpoint Test</h1>
     <p>{{ phase.title }} — attempt #{{ test.attempt_number }}</p>
-    <div class="rm-test-meta">
+    <div class="rm-test-meta" data-mascot-target="test-meta">
       <span>Total: <b>{{ test.total_marks }} marks</b></span>
       <span>Passing: <b>{{ test.passing_marks }} marks</b></span>
       <span>Questions: <b>{{ test.questions|length }}</b></span>
@@ -86,7 +86,7 @@
     </div>
     {% endfor %}
 
-    <button type="submit" class="btn btn-primary rm-test-submit" id="rmTestSubmitBtn">
+    <button type="submit" class="btn btn-primary rm-test-submit" id="rmTestSubmitBtn" data-mascot-target="test-submit-btn">
       <i data-lucide="send" class="lucide"></i> Submit Test
     </button>
   </form>

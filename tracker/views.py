@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from .models import WillpowerTask, MealEntry, WILLPOWER_POINTS, WILLPOWER_DEDUCT
 from datetime import date, timedelta
+from life_simulation.date_utils import get_selected_date
 
 
 # ─── Helpers ────────────────────────────────────────────────
@@ -19,17 +20,28 @@ def sync_willpower_to_daily(user, log_date=None):
         pass
 
 
+def _blocked(request, is_ajax, msg, redirect_to, status=403):
+    """Shared response for a date-guard rejection — JSON for AJAX callers,
+    messages+redirect for normal link/form submissions."""
+    if is_ajax:
+        return JsonResponse({'ok': False, 'error': msg}, status=status)
+    messages.error(request, msg)
+    return redirect(redirect_to)
+
+
 # ─── Willpower Views ─────────────────────────────────────────
 
 @login_required
 def willpower(request):
-    from life_simulation.date_utils import get_selected_date
-
     today = timezone.localdate()
     selected_date = get_selected_date(request)
 
-    prev_date = selected_date - timedelta(days=1)
-    next_date = selected_date + timedelta(days=1)
+    # FIX: .isoformat() added — without it these were `date` objects, which
+    # Django's template engine renders using DATE_FORMAT (e.g. "Aug. 16, 2026")
+    # instead of ISO "YYYY-MM-DD". That broke every ?date= link on this page,
+    # since fromisoformat() couldn't parse the resulting non-ISO query param.
+    prev_date = (selected_date - timedelta(days=1)).isoformat()
+    next_date = (selected_date + timedelta(days=1)).isoformat()
     is_today  = (selected_date == today)
 
     if request.method == 'POST':
@@ -38,6 +50,15 @@ def willpower(request):
         is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
 
         if action == 'add' and title:
+            # Server-side guard: mirrors the frontend rule — can only add
+            # challenges for today or a future (planning) date, never past.
+            if selected_date < today:
+                return _blocked(
+                    request, is_ajax,
+                    "Can't add challenges to a past date.",
+                    f'/tracker/willpower/?date={selected_date}',
+                )
+
             task = WillpowerTask.objects.create(
                 user     = request.user,
                 title    = title,
@@ -179,11 +200,20 @@ def _wp_stats(user, log_date):
 @login_required
 def complete_wp_task(request, task_id):
     task = get_object_or_404(WillpowerTask, id=task_id, user=request.user)
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
+    if task.due_date != timezone.localdate():
+        return _blocked(
+            request, is_ajax,
+            "This action is only allowed for today's entries.",
+            f'/tracker/willpower/?date={task.due_date}',
+        )
+
     if task.status == 'pending':
         task.status = 'completed'
         task.save()
         sync_willpower_to_daily(request.user, task.due_date)
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+    if is_ajax:
         return JsonResponse({'ok': True, **_wp_stats(request.user, task.due_date)})
     return redirect(f'/tracker/willpower/?date={task.due_date}')
 
@@ -191,11 +221,20 @@ def complete_wp_task(request, task_id):
 @login_required
 def skip_wp_task(request, task_id):
     task = get_object_or_404(WillpowerTask, id=task_id, user=request.user)
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
+    if task.due_date != timezone.localdate():
+        return _blocked(
+            request, is_ajax,
+            "This action is only allowed for today's entries.",
+            f'/tracker/willpower/?date={task.due_date}',
+        )
+
     if task.status == 'pending':
         task.status = 'skipped'
         task.save()
         sync_willpower_to_daily(request.user, task.due_date)
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+    if is_ajax:
         return JsonResponse({'ok': True, **_wp_stats(request.user, task.due_date)})
     return redirect(f'/tracker/willpower/?date={task.due_date}')
 
@@ -204,9 +243,18 @@ def skip_wp_task(request, task_id):
 def delete_wp_task(request, task_id):
     task     = get_object_or_404(WillpowerTask, id=task_id, user=request.user)
     due_date = task.due_date
+    is_ajax  = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
+    if due_date < timezone.localdate():
+        return _blocked(
+            request, is_ajax,
+            "Past entries are read-only and can't be deleted.",
+            f'/tracker/willpower/?date={due_date}',
+        )
+
     task.delete()
     sync_willpower_to_daily(request.user, due_date)
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+    if is_ajax:
         return JsonResponse({'ok': True, **_wp_stats(request.user, due_date)})
     messages.success(request, 'Challenge deleted.')
     return redirect(f'/tracker/willpower/?date={due_date}')
@@ -215,16 +263,25 @@ def delete_wp_task(request, task_id):
 @login_required
 def undo_wp_task(request, task_id):
     task = get_object_or_404(WillpowerTask, id=task_id, user=request.user)
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
+    if task.due_date != timezone.localdate():
+        return _blocked(
+            request, is_ajax,
+            "This action is only allowed for today's entries.",
+            f'/tracker/willpower/?date={task.due_date}',
+        )
+
     if task.status != 'pending':
         task.status = 'pending'
         task.save()
         sync_willpower_to_daily(request.user, task.due_date)
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+    if is_ajax:
         return JsonResponse({'ok': True, **_wp_stats(request.user, task.due_date)})
     return redirect(f'/tracker/willpower/?date={task.due_date}')
 
 
-# ─── Diet Views ──────────────────────────────────────────────
+# ─── Diet Views (legacy — MealEntry based, not the main diet/home.html app) ──
 
 @login_required
 def diet(request):

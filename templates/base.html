@@ -12,6 +12,15 @@
   <meta name="robots" content="{% block meta_robots %}index, follow{% endblock %}">
   <link rel="canonical"
     href="{% block canonical_url %}https://life-simulation-9bqz.onrender.com{{ request.path }}{% endblock %}">
+  <!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-RMS16QSBH7"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-RMS16QSBH7');
+</script>
 
   <!-- Favicon — embedded directly as base64, no static file needed -->
   <link rel="icon" type="image/png"
